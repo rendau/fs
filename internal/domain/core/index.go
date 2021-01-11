@@ -15,7 +15,7 @@ func New(
 ) *St {
 	c := &St{
 		lg:      lg,
-		dirPath: dirPath,
+		dirPath: normalizeFsPath(dirPath),
 	}
 
 	return c

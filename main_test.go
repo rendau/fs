@@ -1,9 +1,14 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/rendau/fs/internal/adapters/logger/zap"
 	"github.com/rendau/fs/internal/domain/core"
@@ -12,6 +17,7 @@ import (
 )
 
 const confPath = "test_conf.yml"
+const dirPath = "test_dir"
 
 var (
 	app = struct {
@@ -40,7 +46,7 @@ func TestMain(m *testing.M) {
 
 	app.core = core.New(
 		app.lg,
-		"./test_dir/",
+		dirPath,
 	)
 
 	// Start tests
@@ -50,5 +56,25 @@ func TestMain(m *testing.M) {
 }
 
 func TestCreate(t *testing.T) {
-	require.True(t, true, true)
+	defer func() {
+		_ = os.RemoveAll(filepath.Join(dirPath, "photos"))
+	}()
+
+	ctx := context.Background()
+
+	const fileContent = "test_data"
+
+	fileContentRaw := []byte(fileContent)
+
+	fPath, err := app.core.Create(ctx, "photos", bytes.NewBuffer(fileContentRaw))
+	require.Nil(t, err)
+
+	fPathPrefix := "photos/" + time.Now().Format("2006/01/02") + "/"
+
+	require.True(t, strings.HasPrefix(fPath, fPathPrefix))
+	require.False(t, strings.Contains(strings.TrimPrefix(fPath, fPathPrefix), "/"))
+
+	fContent, err := app.core.Get(ctx, fPath)
+	require.Nil(t, err)
+	require.Equal(t, fileContent, string(fContent))
 }

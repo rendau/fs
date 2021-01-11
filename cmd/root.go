@@ -90,7 +90,7 @@ func loadConf() {
 
 	viper.AutomaticEnv()
 
-	viper.Set("dir_path", uriRPadSlash(viper.GetString("dir_path")))
+	// viper.Set("dir_path", uriRPadSlash(viper.GetString("dir_path")))
 }
 
 func uriRPadSlash(uri string) string {
