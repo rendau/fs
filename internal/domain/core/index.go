@@ -5,14 +5,17 @@ import (
 )
 
 type St struct {
-	lg interfaces.Logger
+	lg      interfaces.Logger
+	dirPath string
 }
 
 func New(
 	lg interfaces.Logger,
+	dirPath string,
 ) *St {
 	c := &St{
-		lg: lg,
+		lg:      lg,
+		dirPath: dirPath,
 	}
 
 	return c

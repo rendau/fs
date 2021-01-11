@@ -12,7 +12,6 @@ import (
 	"github.com/rendau/fs/internal/adapters/httpapi/rest"
 	"github.com/rendau/fs/internal/adapters/logger/zap"
 	"github.com/rendau/fs/internal/domain/core"
-	"github.com/rendau/fs/internal/domain/usecases"
 	"github.com/spf13/viper"
 )
 
@@ -26,7 +25,6 @@ func Execute() {
 	app := struct {
 		lg      *zap.St
 		core    *core.St
-		ucs     *usecases.St
 		restApi *rest.St
 	}{}
 
@@ -37,17 +35,13 @@ func Execute() {
 
 	app.core = core.New(
 		app.lg,
-	)
-
-	app.ucs = usecases.New(
-		app.lg,
-		app.core,
+		viper.GetString("dir_path"),
 	)
 
 	app.restApi = rest.New(
 		app.lg,
 		viper.GetString("http_listen"),
-		app.ucs,
+		app.core,
 	)
 
 	app.lg.Infow(
@@ -96,8 +90,9 @@ func loadConf() {
 
 	viper.AutomaticEnv()
 
-	// viper.Set("some.url", uriRPadSlash(viper.GetString("some.url")))
+	viper.Set("dir_path", uriRPadSlash(viper.GetString("dir_path")))
 }
+
 func uriRPadSlash(uri string) string {
 	if uri != "" && !strings.HasSuffix(uri, "/") {
 		return uri + "/"

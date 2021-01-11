@@ -40,6 +40,7 @@ func TestMain(m *testing.M) {
 
 	app.core = core.New(
 		app.lg,
+		"./test_dir/",
 	)
 
 	// Start tests
@@ -48,6 +49,6 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestMenu(t *testing.T) {
+func TestCreate(t *testing.T) {
 	require.True(t, true, true)
 }
