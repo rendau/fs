@@ -66,7 +66,7 @@ func TestCreate(t *testing.T) {
 
 	fileContentRaw := []byte(fileContent)
 
-	fPath, err := app.core.Create(ctx, "photos", bytes.NewBuffer(fileContentRaw))
+	fPath, err := app.core.Create(ctx, "photos", "data.txt", bytes.NewBuffer(fileContentRaw))
 	require.Nil(t, err)
 
 	fPathPrefix := "photos/" + time.Now().Format("2006/01/02") + "/"
