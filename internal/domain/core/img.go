@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	imgpFileTypes = map[string]struct {
+	imgFileTypes = map[string]struct {
 		format      imaging.Format
 		contentType string
 	}{
@@ -24,14 +24,14 @@ var (
 	}
 )
 
-func (c *St) imgpHandle(fPath string, w io.Writer, pars *entities.ImgpParsSt) error {
+func (c *St) imgHandle(fPath string, w io.Writer, pars *entities.ImgParsSt) error {
 	if pars.IsEmpty() {
 		return nil
 	}
 
 	fileExt := strings.ToLower(filepath.Ext(fPath))
 
-	imgFormat, ok := imgpFileTypes[fileExt]
+	imgFormat, ok := imgFileTypes[fileExt]
 	if !ok {
 		return nil
 	}

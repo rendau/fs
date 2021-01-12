@@ -36,6 +36,8 @@ func Execute() {
 	app.core = core.New(
 		app.lg,
 		viper.GetString("dir_path"),
+		viper.GetInt("img.max_width"),
+		viper.GetInt("img.max_height"),
 	)
 
 	app.restApi = rest.New(

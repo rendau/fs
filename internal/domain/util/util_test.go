@@ -1,11 +1,11 @@
-package core
+package util
 
 import (
 	"path/filepath"
 	"testing"
 )
 
-func Test_normalizeFsPath(t *testing.T) {
+func Test_NormalizeFsPath(t *testing.T) {
 	type args struct {
 		v string
 	}
@@ -77,14 +77,14 @@ func Test_normalizeFsPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := normalizeFsPath(tt.args.v); got != tt.want {
+			if got := NormalizeFsPath(tt.args.v); got != tt.want {
 				t.Errorf("normalizeFsPath() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func Test_normalizeUrlPath(t *testing.T) {
+func Test_NormalizeUrlPath(t *testing.T) {
 	type args struct {
 		v string
 	}
@@ -126,7 +126,7 @@ func Test_normalizeUrlPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := normalizeUrlPath(tt.args.v); got != tt.want {
+			if got := NormalizeUrlPath(tt.args.v); got != tt.want {
 				t.Errorf("normalizeUrlPath() = %v, want %v", got, tt.want)
 			}
 		})

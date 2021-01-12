@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"io/ioutil"
@@ -8,43 +9,82 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/rendau/fs/internal/domain/entities"
+	"github.com/rendau/fs/internal/domain/util"
 )
 
 func (c *St) Create(ctx context.Context, reqDir string, reqFileName string, reqFile io.Reader) (string, error) {
-	datePath := getDateUrlPath()
+	dateUrlPath := util.GetDateUrlPath()
 
-	absDirPath := filepath.Join(c.dirPath, normalizeFsPath(reqDir), normalizeFsPath(datePath))
+	absFsDirPath := filepath.Join(c.dirPath, util.NormalizeFsPath(reqDir), util.NormalizeFsPath(dateUrlPath))
 
-	err := os.MkdirAll(absDirPath, os.ModePerm)
+	err := os.MkdirAll(absFsDirPath, os.ModePerm)
 	if err != nil {
 		return "", err
 	}
 
 	reqFileExt := strings.ToLower(filepath.Ext(reqFileName))
 
-	f, err := ioutil.TempFile(absDirPath, "*"+reqFileExt)
+	fileName, fileFsPath, err := func() (string, string, error) {
+		f, err := ioutil.TempFile(absFsDirPath, "*"+reqFileExt)
+		if err != nil {
+			return "", "", err
+		}
+		defer f.Close()
+
+		fileFsPath := f.Name()
+		_, fileName := filepath.Split(fileFsPath)
+
+		_, err = io.Copy(f, reqFile)
+		if err != nil {
+			return "", "", err
+		}
+
+		return fileName, fileFsPath, nil
+	}()
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
 
-	_, fileName := filepath.Split(f.Name())
+	err = c.imgHandle(fileFsPath, nil, &entities.ImgParsSt{
+		Method: "fit",
+		Width:  c.imgMaxWidth,
+		Height: c.imgMaxHeight,
+	})
 
-	_, err = io.Copy(f, reqFile)
-	if err != nil {
-		return "", err
-	}
-
-	return path.Join(normalizeUrlPath(reqDir), datePath, fileName), nil
+	return path.Join(util.NormalizeUrlPath(reqDir), dateUrlPath, fileName), nil
 }
 
-func (c *St) Get(ctx context.Context, path string) ([]byte, error) {
-	absPath := filepath.Join(c.dirPath, normalizeFsPath(path))
+func (c *St) Get(ctx context.Context, path string, imgPars *entities.ImgParsSt) (string, []byte, error) {
+	var err error
 
-	content, err := ioutil.ReadFile(absPath)
-	if err != nil {
-		return nil, err
+	absFsPath := filepath.Join(c.dirPath, util.NormalizeFsPath(path))
+
+	var name string
+	var content = make([]byte, 0)
+
+	if util.PathIsDir(absFsPath) {
+		return "", nil, nil
+	} else {
+		_, name = filepath.Split(absFsPath)
 	}
 
-	return content, nil
+	if !imgPars.IsEmpty() {
+		buffer := bytes.Buffer{}
+
+		err = c.imgHandle(absFsPath, &buffer, imgPars)
+		if err != nil {
+			return "", nil, err
+		}
+
+		content = buffer.Bytes()
+	} else {
+		content, err = ioutil.ReadFile(absFsPath)
+		if err != nil {
+			return "", nil, err
+		}
+	}
+
+	return name, content, nil
 }
