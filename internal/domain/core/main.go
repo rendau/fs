@@ -92,21 +92,34 @@ func (c *St) Create(ctx context.Context, reqDir string, reqFileName string, reqF
 	return fileUrlRelPath, nil
 }
 
-func (c *St) Get(ctx context.Context, path string, imgPars *entities.ImgParsSt, download bool) (string, []byte, error) {
+func (c *St) Get(ctx context.Context, reqPath string, imgPars *entities.ImgParsSt, download bool) (string, []byte, error) {
 	var err error
 
-	absFsPath := filepath.Join(c.dirPath, util.NormalizeFsPath(path))
+	absFsPath := filepath.Join(c.dirPath, util.NormalizeFsPath(reqPath))
 
 	var name string
 	var content = make([]byte, 0)
 
 	if util.PathIsDir(absFsPath) {
-		if download {
+		dirName := filepath.Base(absFsPath)
 
-		} else if strings.HasSuffix(path, "/") {
-			absFsPath = filepath.Join(absFsPath, "index.html")
-			name = "index.html"
-			imgPars.Reset()
+		if strings.HasPrefix(dirName, cns.ZipDirNamePrefix) {
+			if download {
+				archiveBuffer, err := c.zipCompressDir(absFsPath)
+				if err != nil {
+					return "", nil, err
+				}
+
+				return "archive.zip", archiveBuffer.Bytes(), nil
+			} else if strings.HasSuffix(reqPath, "/") {
+				absFsPath = filepath.Join(absFsPath, "index.html")
+				name = "index.html"
+				imgPars.Reset()
+			} else {
+				return "", nil, errs.NotFound
+			}
+		} else {
+			return "", nil, errs.NotFound
 		}
 	} else {
 		_, name = filepath.Split(absFsPath)
@@ -119,7 +132,7 @@ func (c *St) Get(ctx context.Context, path string, imgPars *entities.ImgParsSt, 
 		}
 		return "", nil, errs.NotFound
 	}
-	if fInfo.IsDir() {
+	if fInfo.IsDir() { // if "index.html" is dir
 		return "", nil, errs.NotFound
 	}
 
@@ -135,7 +148,7 @@ func (c *St) Get(ctx context.Context, path string, imgPars *entities.ImgParsSt, 
 	} else {
 		content, err = ioutil.ReadFile(absFsPath)
 		if err != nil {
-			c.lg.Errorw("Fail to read file", err, "path", absFsPath)
+			c.lg.Errorw("Fail to read file", err, "f_path", absFsPath)
 			return "", nil, err
 		}
 	}

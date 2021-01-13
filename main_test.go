@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"image/color"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -40,8 +41,19 @@ func cleanTestDir() {
 			return nil
 		}
 
+		if path == testDirPath {
+			return nil
+		}
+
+		// app.lg.Infow("cleanTestDir walk", "path", path)
+
 		if info.IsDir() {
-			return os.RemoveAll(path)
+			err = os.RemoveAll(path)
+			if err != nil {
+				return err
+			}
+
+			return filepath.SkipDir
 		}
 
 		return os.Remove(path)
@@ -158,21 +170,53 @@ func TestCreateZip(t *testing.T) {
 
 	ctx := context.Background()
 
-	zipFiles := [][2]string{
+	zipContentIsSame := func(a, b [][2]string) {
+		require.Equal(t, len(a), len(b))
+
+		for _, ai := range a {
+			found := false
+
+			for _, bi := range b {
+				if bi[0] == ai[0] {
+					found = true
+					require.Equal(t, ai[1], bi[1])
+					break
+				}
+			}
+
+			require.True(t, found)
+		}
+
+		for _, bi := range b {
+			found := false
+
+			for _, ai := range a {
+				if ai[0] == bi[0] {
+					found = true
+					require.Equal(t, bi[1], ai[1])
+					break
+				}
+			}
+
+			require.True(t, found)
+		}
+	}
+
+	srcZipFiles := [][2]string{
 		{"index.html", "some html content"},
 		{"abc/file.txt", "file content"},
 		{"abc/qwe/x.txt", "x content"},
 		{"todo.txt", "todo content"},
 	}
 
-	zipBuffer, err := createZipArchive(zipFiles)
+	zipBuffer, err := createZipArchive(srcZipFiles)
 	require.Nil(t, err)
 
 	fPath, err := app.core.Create(ctx, "zip", "a.zip", zipBuffer, true)
 	require.Nil(t, err)
 	require.True(t, strings.HasSuffix(fPath, "/"))
 
-	for _, zp := range zipFiles {
+	for _, zp := range srcZipFiles {
 		_, fContent, err := app.core.Get(ctx, fPath+zp[0], &entities.ImgParsSt{}, false)
 		require.Nil(t, err)
 		require.NotNil(t, fContent)
@@ -180,6 +224,42 @@ func TestCreateZip(t *testing.T) {
 	}
 
 	fName, fContent, err := app.core.Get(ctx, fPath, &entities.ImgParsSt{}, false)
+	require.Nil(t, err)
+	require.Equal(t, "index.html", fName)
+	require.NotNil(t, fContent)
+	require.Equal(t, "some html content", string(fContent))
+
+	fName, fContent, err = app.core.Get(ctx, fPath, &entities.ImgParsSt{}, true)
+	require.Nil(t, err)
+	require.True(t, strings.HasSuffix(fName, ".zip"))
+	require.NotNil(t, fContent)
+
+	resultZipFiles, err := extractZipArchive(fContent)
+	require.Nil(t, err)
+	zipContentIsSame(srcZipFiles, resultZipFiles)
+
+	srcZipFiles = [][2]string{
+		{"root/index.html", "some html content"},
+		{"root/abc/file.txt", "file content"},
+		{"root/abc/qwe/x.txt", "x content"},
+		{"root/todo.txt", "todo content"},
+	}
+
+	zipBuffer, err = createZipArchive(srcZipFiles)
+	require.Nil(t, err)
+
+	fPath, err = app.core.Create(ctx, "zip", "a.zip", zipBuffer, true)
+	require.Nil(t, err)
+	require.True(t, strings.HasSuffix(fPath, "/"))
+
+	for _, zp := range srcZipFiles {
+		_, fContent, err := app.core.Get(ctx, fPath+strings.TrimLeft(zp[0], "root/"), &entities.ImgParsSt{}, false)
+		require.Nil(t, err)
+		require.NotNil(t, fContent)
+		require.Equal(t, zp[1], string(fContent))
+	}
+
+	fName, fContent, err = app.core.Get(ctx, fPath, &entities.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.Equal(t, "index.html", fName)
 	require.NotNil(t, fContent)
@@ -200,6 +280,45 @@ func createZipArchive(items [][2]string) (*bytes.Buffer, error) {
 		_, err = f.Write([]byte(item[1]))
 		if err != nil {
 			log.Fatal(err)
+		}
+	}
+
+	return result, nil
+}
+
+func extractZipArchive(data []byte) ([][2]string, error) {
+	reader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([][2]string, 0)
+
+	fileHandler := func(f *zip.File) error {
+		if f.FileInfo().IsDir() {
+			return nil
+		}
+
+		srcFile, err := f.Open()
+		if err != nil {
+			return err
+		}
+		defer srcFile.Close()
+
+		srcFileDataRaw, err := ioutil.ReadAll(srcFile)
+		if err != nil {
+			return err
+		}
+
+		result = append(result, [2]string{f.Name, string(srcFileDataRaw)})
+
+		return nil
+	}
+
+	for _, f := range reader.File {
+		err = fileHandler(f)
+		if err != nil {
+			return nil, err
 		}
 	}
 

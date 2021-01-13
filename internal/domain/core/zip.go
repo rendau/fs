@@ -23,13 +23,6 @@ func (c *St) zipExtract(archive io.Reader, dstDirPath string) error {
 	}
 
 	fileHandler := func(f *zip.File) error {
-		frc, err := f.Open()
-		if err != nil {
-			c.lg.Errorw("Fail to open file in archive", err)
-			return err
-		}
-		defer frc.Close()
-
 		fPath := filepath.Join(dstDirPath, f.Name)
 
 		if f.FileInfo().IsDir() {
@@ -45,6 +38,13 @@ func (c *St) zipExtract(archive io.Reader, dstDirPath string) error {
 				return err
 			}
 
+			srcFile, err := f.Open()
+			if err != nil {
+				c.lg.Errorw("Fail to open file in archive", err)
+				return err
+			}
+			defer srcFile.Close()
+
 			dstFile, err := os.Create(fPath)
 			if err != nil {
 				c.lg.Errorw("Fail to create file", err)
@@ -52,7 +52,7 @@ func (c *St) zipExtract(archive io.Reader, dstDirPath string) error {
 			}
 			defer dstFile.Close()
 
-			_, err = io.Copy(dstFile, frc)
+			_, err = io.Copy(dstFile, srcFile)
 			if err != nil {
 				c.lg.Errorw("Fail to copy data", err)
 				return err
@@ -73,7 +73,10 @@ func (c *St) zipExtract(archive io.Reader, dstDirPath string) error {
 }
 
 func (c *St) zipCompressDir(dirPath string) (*bytes.Buffer, error) {
-	items := make([][2]string, 0)
+	result := new(bytes.Buffer)
+
+	zipWriter := zip.NewWriter(result)
+	defer zipWriter.Close()
 
 	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -84,43 +87,41 @@ func (c *St) zipCompressDir(dirPath string) (*bytes.Buffer, error) {
 			return nil
 		}
 
+		// c.lg.Infow("Walk", "path", path)
+
+		if path == dirPath || info.IsDir() {
+			return nil
+		}
+
 		relPath, err := filepath.Rel(dirPath, path)
 		if err != nil {
 			return err
 		}
 
-		items = append(items, [2]string{relPath, path})
+		srcF, err := os.Open(path)
+		if err != nil {
+			c.lg.Errorw("Fail to open file", err)
+			return err
+		}
+		defer srcF.Close()
+
+		dstF, err := zipWriter.Create(relPath)
+		if err != nil {
+			c.lg.Errorw("Fail to create file in zip", err)
+			return err
+		}
+
+		_, err = io.Copy(dstF, srcF)
+		if err != nil {
+			c.lg.Errorw("Fail to copy file data", err)
+			return err
+		}
 
 		return nil
 	})
 	if err != nil {
 		c.lg.Errorw("Fail to walk dir", err, "dir_path", dirPath)
 		return nil, err
-	}
-
-	result := new(bytes.Buffer)
-
-	zipWriter := zip.NewWriter(result)
-	defer zipWriter.Close()
-
-	for _, item := range items {
-		dstF, err := zipWriter.Create(item[0])
-		if err != nil {
-			c.lg.Errorw("Fail to create file in zip", err)
-			return nil, err
-		}
-
-		srcF, err := os.Open(item[1])
-		if err != nil {
-			c.lg.Errorw("Fail to open file", err)
-			return nil, err
-		}
-
-		_, err = io.Copy(dstF, srcF)
-		if err != nil {
-			c.lg.Errorw("Fail to copy file data", err)
-			return nil, err
-		}
 	}
 
 	return result, nil
