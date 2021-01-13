@@ -1,3 +1,5 @@
 package cns
 
-const ()
+const (
+	ZipDirNamePrefix = "__fs-zip-dir_"
+)
