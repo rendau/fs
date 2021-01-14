@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func (c *St) zipExtract(archive io.Reader, dstDirPath string) error {
@@ -22,17 +23,17 @@ func (c *St) zipExtract(archive io.Reader, dstDirPath string) error {
 		return err
 	}
 
-	fileHandler := func(f *zip.File) error {
-		fPath := filepath.Join(dstDirPath, f.Name)
+	fileHandler := func(f *zip.File, skipDirPrefix string) error {
+		dstPath := filepath.Join(dstDirPath, strings.TrimLeft(f.Name, skipDirPrefix))
 
 		if f.FileInfo().IsDir() {
-			err = os.MkdirAll(fPath, f.Mode())
+			err = os.MkdirAll(dstPath, f.Mode())
 			if err != nil {
 				c.lg.Errorw("Fail to create dirs", err)
 				return err
 			}
 		} else {
-			err = os.MkdirAll(filepath.Dir(fPath), os.ModePerm)
+			err = os.MkdirAll(filepath.Dir(dstPath), os.ModePerm)
 			if err != nil {
 				c.lg.Errorw("Fail to create dirs for file", err)
 				return err
@@ -45,7 +46,7 @@ func (c *St) zipExtract(archive io.Reader, dstDirPath string) error {
 			}
 			defer srcFile.Close()
 
-			dstFile, err := os.Create(fPath)
+			dstFile, err := os.Create(dstPath)
 			if err != nil {
 				c.lg.Errorw("Fail to create file", err)
 				return err
@@ -62,8 +63,30 @@ func (c *St) zipExtract(archive io.Reader, dstDirPath string) error {
 		return nil
 	}
 
+	var skipDirPrefix string
+
 	for _, f := range reader.File {
-		err = fileHandler(f)
+		fPathSlice := strings.SplitN(f.Name, "/", 2)
+
+		if len(fPathSlice) > 1 {
+			if skipDirPrefix == "" {
+				skipDirPrefix = fPathSlice[0]
+			} else if fPathSlice[0] != skipDirPrefix {
+				skipDirPrefix = ""
+				break
+			}
+		} else {
+			skipDirPrefix = ""
+			break
+		}
+	}
+
+	if skipDirPrefix != "" {
+		skipDirPrefix += "/"
+	}
+
+	for _, f := range reader.File {
+		err = fileHandler(f, skipDirPrefix)
 		if err != nil {
 			return err
 		}
@@ -86,8 +109,6 @@ func (c *St) zipCompressDir(dirPath string) (*bytes.Buffer, error) {
 		if info == nil {
 			return nil
 		}
-
-		// c.lg.Infow("Walk", "path", path)
 
 		if path == dirPath || info.IsDir() {
 			return nil

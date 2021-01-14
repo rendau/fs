@@ -13,6 +13,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rendau/fs/internal/domain/errs"
+
+	"github.com/rendau/fs/internal/cns"
+
 	"github.com/rendau/fs/internal/domain/entities"
 
 	"github.com/disintegration/imaging"
@@ -104,9 +108,15 @@ func TestCreate(t *testing.T) {
 
 	ctx := context.Background()
 
-	fileContentRaw := []byte("test_data")
+	_, err := app.core.Create(ctx, "asd/"+cns.ZipDirNamePrefix+"_asd", "a.txt", bytes.NewBuffer([]byte("test_data")), false)
+	require.NotNil(t, err)
+	require.Equal(t, errs.BadDirName, err)
 
-	fPath, err := app.core.Create(ctx, "photos", "data.txt", bytes.NewBuffer(fileContentRaw), false)
+	_, err = app.core.Create(ctx, cns.ZipDirNamePrefix+"_asd/asd", "a.txt", bytes.NewBuffer([]byte("test_data")), false)
+	require.NotNil(t, err)
+	require.Equal(t, errs.BadDirName, err)
+
+	fPath, err := app.core.Create(ctx, "photos", "data.txt", bytes.NewBuffer([]byte("test_data")), false)
 	require.Nil(t, err)
 
 	fPathPrefix := "photos/" + time.Now().Format("2006/01/02") + "/"
@@ -120,7 +130,7 @@ func TestCreate(t *testing.T) {
 	require.Equal(t, "test_data", string(fContent))
 	require.NotEmpty(t, fName)
 
-	largeImg := imaging.New(imgMaxWidth+500, imgMaxHeight+500, color.RGBA{R: 0xaa, G: 0x00, B: 0x00, A: 0xff})
+	largeImg := imaging.New(imgMaxWidth+10, imgMaxHeight+10, color.RGBA{R: 0xaa, G: 0x00, B: 0x00, A: 0xff})
 	require.NotNil(t, largeImg)
 
 	largeImgBuffer := new(bytes.Buffer)
@@ -142,7 +152,7 @@ func TestCreate(t *testing.T) {
 	require.Equal(t, imgMaxWidth, imgBounds.X)
 	require.Equal(t, imgMaxHeight, imgBounds.X)
 
-	fName, fContent, err = app.core.Get(ctx, fPath, &entities.ImgParsSt{Method: "fit", Width: 300, Height: 300}, false)
+	fName, fContent, err = app.core.Get(ctx, fPath, &entities.ImgParsSt{Method: "fit", Width: imgMaxWidth - 10, Height: imgMaxHeight - 10}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -150,10 +160,10 @@ func TestCreate(t *testing.T) {
 	require.Nil(t, err)
 
 	imgBounds = img.Bounds().Max
-	require.Equal(t, 300, imgBounds.X)
-	require.Equal(t, 300, imgBounds.X)
+	require.Equal(t, imgMaxWidth-10, imgBounds.X)
+	require.Equal(t, imgMaxHeight-10, imgBounds.X)
 
-	fName, fContent, err = app.core.Get(ctx, fPath, &entities.ImgParsSt{Method: "fit", Width: imgMaxWidth + 500, Height: imgMaxHeight + 500}, false)
+	fName, fContent, err = app.core.Get(ctx, fPath, &entities.ImgParsSt{Method: "fit", Width: imgMaxWidth + 10, Height: imgMaxHeight + 10}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -211,6 +221,14 @@ func TestCreateZip(t *testing.T) {
 
 	zipBuffer, err := createZipArchive(srcZipFiles)
 	require.Nil(t, err)
+
+	_, err = app.core.Create(ctx, "zip/"+cns.ZipDirNamePrefix+"_asd", "a.zip", zipBuffer, true)
+	require.NotNil(t, err)
+	require.Equal(t, errs.BadDirName, err)
+
+	_, err = app.core.Create(ctx, cns.ZipDirNamePrefix+"_asd/zip", "a.zip", zipBuffer, true)
+	require.NotNil(t, err)
+	require.Equal(t, errs.BadDirName, err)
 
 	fPath, err := app.core.Create(ctx, "zip", "a.zip", zipBuffer, true)
 	require.Nil(t, err)

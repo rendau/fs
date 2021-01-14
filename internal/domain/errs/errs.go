@@ -7,6 +7,7 @@ func (e Err) Error() string {
 }
 
 const (
-	ServiceNA = Err("server_not_available")
-	NotFound  = Err("not_found")
+	ServiceNA  = Err("server_not_available")
+	NotFound   = Err("not_found")
+	BadDirName = Err("bad_dir_name")
 )

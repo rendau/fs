@@ -18,6 +18,10 @@ import (
 )
 
 func (c *St) Create(ctx context.Context, reqDir string, reqFileName string, reqFile io.Reader, unZip bool) (string, error) {
+	if strings.Contains("/"+util.NormalizeUrlPath(reqDir), cns.ZipDirNamePrefix) {
+		return "", errs.BadDirName
+	}
+
 	dateUrlPath := util.GetDateUrlPath()
 
 	absFsDirPath := filepath.Join(c.dirPath, util.NormalizeFsPath(reqDir), util.NormalizeFsPath(dateUrlPath))
