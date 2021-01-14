@@ -3,7 +3,6 @@ package main
 import (
 	"archive/zip"
 	"bytes"
-	"context"
 	"image/color"
 	"io/ioutil"
 	"log"
@@ -13,16 +12,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rendau/fs/internal/domain/errs"
-
-	"github.com/rendau/fs/internal/cns"
-
-	"github.com/rendau/fs/internal/domain/entities"
-
 	"github.com/disintegration/imaging"
-
+	cleanerMock "github.com/rendau/fs/internal/adapters/cleaner/mock"
 	"github.com/rendau/fs/internal/adapters/logger/zap"
+	"github.com/rendau/fs/internal/cns"
 	"github.com/rendau/fs/internal/domain/core"
+	"github.com/rendau/fs/internal/domain/entities"
+	"github.com/rendau/fs/internal/domain/errs"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 )
@@ -34,25 +30,26 @@ const imgMaxHeight = 1000
 
 var (
 	app = struct {
-		lg   *zap.St
-		core *core.St
+		lg      *zap.St
+		cleaner *cleanerMock.St
+		core    *core.St
 	}{}
 )
 
 func cleanTestDir() {
-	err := filepath.Walk(testDirPath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(testDirPath, func(p string, info os.FileInfo, err error) error {
 		if err != nil || info == nil {
 			return nil
 		}
 
-		if path == testDirPath {
+		if p == testDirPath {
 			return nil
 		}
 
-		// app.lg.Infow("cleanTestDir walk", "path", path)
+		// app.lg.Infow("cleanTestDir walk", "path", p)
 
 		if info.IsDir() {
-			err = os.RemoveAll(path)
+			err = os.RemoveAll(p)
 			if err != nil {
 				return err
 			}
@@ -60,7 +57,7 @@ func cleanTestDir() {
 			return filepath.SkipDir
 		}
 
-		return os.Remove(path)
+		return os.Remove(p)
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -90,11 +87,15 @@ func TestMain(m *testing.M) {
 	}
 	defer app.lg.Sync()
 
+	app.cleaner = cleanerMock.New()
+
 	app.core = core.New(
 		app.lg,
 		testDirPath,
 		imgMaxWidth,
 		imgMaxHeight,
+		app.cleaner,
+		true,
 	)
 
 	// Start tests
@@ -106,17 +107,15 @@ func TestMain(m *testing.M) {
 func TestCreate(t *testing.T) {
 	cleanTestDir()
 
-	ctx := context.Background()
-
-	_, err := app.core.Create(ctx, "asd/"+cns.ZipDirNamePrefix+"_asd", "a.txt", bytes.NewBuffer([]byte("test_data")), false)
+	_, err := app.core.Create("asd/"+cns.ZipDirNamePrefix+"_asd", "a.txt", bytes.NewBuffer([]byte("test_data")), false)
 	require.NotNil(t, err)
 	require.Equal(t, errs.BadDirName, err)
 
-	_, err = app.core.Create(ctx, cns.ZipDirNamePrefix+"_asd/asd", "a.txt", bytes.NewBuffer([]byte("test_data")), false)
+	_, err = app.core.Create(cns.ZipDirNamePrefix+"_asd/asd", "a.txt", bytes.NewBuffer([]byte("test_data")), false)
 	require.NotNil(t, err)
 	require.Equal(t, errs.BadDirName, err)
 
-	fPath, err := app.core.Create(ctx, "photos", "data.txt", bytes.NewBuffer([]byte("test_data")), false)
+	fPath, err := app.core.Create("photos", "data.txt", bytes.NewBuffer([]byte("test_data")), false)
 	require.Nil(t, err)
 
 	fPathPrefix := "photos/" + time.Now().Format("2006/01/02") + "/"
@@ -124,7 +123,7 @@ func TestCreate(t *testing.T) {
 	require.True(t, strings.HasPrefix(fPath, fPathPrefix))
 	require.False(t, strings.Contains(strings.TrimPrefix(fPath, fPathPrefix), "/"))
 
-	fName, fContent, err := app.core.Get(ctx, fPath, &entities.ImgParsSt{}, false)
+	fName, fContent, err := app.core.Get(fPath, &entities.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 	require.Equal(t, "test_data", string(fContent))
@@ -138,10 +137,10 @@ func TestCreate(t *testing.T) {
 	err = imaging.Encode(largeImgBuffer, largeImg, imaging.JPEG)
 	require.Nil(t, err)
 
-	fPath, err = app.core.Create(ctx, "photos", "a.jpg", bytes.NewBuffer(largeImgBuffer.Bytes()), false)
+	fPath, err = app.core.Create("photos", "a.jpg", bytes.NewBuffer(largeImgBuffer.Bytes()), false)
 	require.Nil(t, err)
 
-	fName, fContent, err = app.core.Get(ctx, fPath, &entities.ImgParsSt{}, false)
+	fName, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -152,7 +151,7 @@ func TestCreate(t *testing.T) {
 	require.Equal(t, imgMaxWidth, imgBounds.X)
 	require.Equal(t, imgMaxHeight, imgBounds.X)
 
-	fName, fContent, err = app.core.Get(ctx, fPath, &entities.ImgParsSt{Method: "fit", Width: imgMaxWidth - 10, Height: imgMaxHeight - 10}, false)
+	fName, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{Method: "fit", Width: imgMaxWidth - 10, Height: imgMaxHeight - 10}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -163,7 +162,7 @@ func TestCreate(t *testing.T) {
 	require.Equal(t, imgMaxWidth-10, imgBounds.X)
 	require.Equal(t, imgMaxHeight-10, imgBounds.X)
 
-	fName, fContent, err = app.core.Get(ctx, fPath, &entities.ImgParsSt{Method: "fit", Width: imgMaxWidth + 10, Height: imgMaxHeight + 10}, false)
+	fName, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{Method: "fit", Width: imgMaxWidth + 10, Height: imgMaxHeight + 10}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -177,8 +176,6 @@ func TestCreate(t *testing.T) {
 
 func TestCreateZip(t *testing.T) {
 	cleanTestDir()
-
-	ctx := context.Background()
 
 	zipContentIsSame := func(a, b [][2]string) {
 		require.Equal(t, len(a), len(b))
@@ -222,32 +219,32 @@ func TestCreateZip(t *testing.T) {
 	zipBuffer, err := createZipArchive(srcZipFiles)
 	require.Nil(t, err)
 
-	_, err = app.core.Create(ctx, "zip/"+cns.ZipDirNamePrefix+"_asd", "a.zip", zipBuffer, true)
+	_, err = app.core.Create("zip/"+cns.ZipDirNamePrefix+"_asd", "a.zip", zipBuffer, true)
 	require.NotNil(t, err)
 	require.Equal(t, errs.BadDirName, err)
 
-	_, err = app.core.Create(ctx, cns.ZipDirNamePrefix+"_asd/zip", "a.zip", zipBuffer, true)
+	_, err = app.core.Create(cns.ZipDirNamePrefix+"_asd/zip", "a.zip", zipBuffer, true)
 	require.NotNil(t, err)
 	require.Equal(t, errs.BadDirName, err)
 
-	fPath, err := app.core.Create(ctx, "zip", "a.zip", zipBuffer, true)
+	fPath, err := app.core.Create("zip", "a.zip", zipBuffer, true)
 	require.Nil(t, err)
 	require.True(t, strings.HasSuffix(fPath, "/"))
 
 	for _, zp := range srcZipFiles {
-		_, fContent, err := app.core.Get(ctx, fPath+zp[0], &entities.ImgParsSt{}, false)
+		_, fContent, err := app.core.Get(fPath+zp[0], &entities.ImgParsSt{}, false)
 		require.Nil(t, err)
 		require.NotNil(t, fContent)
 		require.Equal(t, zp[1], string(fContent))
 	}
 
-	fName, fContent, err := app.core.Get(ctx, fPath, &entities.ImgParsSt{}, false)
+	fName, fContent, err := app.core.Get(fPath, &entities.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.Equal(t, "index.html", fName)
 	require.NotNil(t, fContent)
 	require.Equal(t, "some html content", string(fContent))
 
-	fName, fContent, err = app.core.Get(ctx, fPath, &entities.ImgParsSt{}, true)
+	fName, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{}, true)
 	require.Nil(t, err)
 	require.True(t, strings.HasSuffix(fName, ".zip"))
 	require.NotNil(t, fContent)
@@ -266,18 +263,18 @@ func TestCreateZip(t *testing.T) {
 	zipBuffer, err = createZipArchive(srcZipFiles)
 	require.Nil(t, err)
 
-	fPath, err = app.core.Create(ctx, "zip", "a.zip", zipBuffer, true)
+	fPath, err = app.core.Create("zip", "a.zip", zipBuffer, true)
 	require.Nil(t, err)
 	require.True(t, strings.HasSuffix(fPath, "/"))
 
 	for _, zp := range srcZipFiles {
-		_, fContent, err := app.core.Get(ctx, fPath+strings.TrimLeft(zp[0], "root/"), &entities.ImgParsSt{}, false)
+		_, fContent, err := app.core.Get(fPath+strings.TrimLeft(zp[0], "root/"), &entities.ImgParsSt{}, false)
 		require.Nil(t, err)
 		require.NotNil(t, fContent)
 		require.Equal(t, zp[1], string(fContent))
 	}
 
-	fName, fContent, err = app.core.Get(ctx, fPath, &entities.ImgParsSt{}, false)
+	fName, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.Equal(t, "index.html", fName)
 	require.NotNil(t, fContent)

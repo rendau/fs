@@ -101,7 +101,7 @@ func (c *St) zipCompressDir(dirPath string) (*bytes.Buffer, error) {
 	zipWriter := zip.NewWriter(result)
 	defer zipWriter.Close()
 
-	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(dirPath, func(p string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -110,16 +110,16 @@ func (c *St) zipCompressDir(dirPath string) (*bytes.Buffer, error) {
 			return nil
 		}
 
-		if path == dirPath || info.IsDir() {
+		if p == dirPath || info.IsDir() {
 			return nil
 		}
 
-		relPath, err := filepath.Rel(dirPath, path)
+		relPath, err := filepath.Rel(dirPath, p)
 		if err != nil {
 			return err
 		}
 
-		srcF, err := os.Open(path)
+		srcF, err := os.Open(p)
 		if err != nil {
 			c.lg.Errorw("Fail to open file", err)
 			return err

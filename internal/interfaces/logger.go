@@ -1,6 +1,5 @@
 package interfaces
 
-// Logger - is interface of logger
 type Logger interface {
 	Fatal(args ...interface{})
 	Fatalf(tmpl string, args ...interface{})

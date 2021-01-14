@@ -31,36 +31,6 @@ func PathIsDir(p string) bool {
 	return err == nil && fileInfo.IsDir()
 }
 
-// func Walk(dirPath string) error {
-// 	err := filepath.Walk(
-// 		dirPath,
-// 		func(path string, f os.FileInfo, err error) error {
-// 			if err != nil {
-// 				return nil
-// 			}
-// 			if f == nil {
-// 				return nil
-// 			}
-// 			path, err = filepath.Rel(conf.Conf.MediaPath, path)
-// 			if err != nil {
-// 				return nil
-// 			}
-// 			if f.IsDir() {
-// 				if path == constants.TempDirName {
-// 					return filepath.SkipDir
-// 				}
-// 				if strings.HasPrefix(filepath.Base(path), constants.ZipDirNamePrefix) {
-// 					stFiles = append(stFiles, path+"/")
-// 					return filepath.SkipDir
-// 				}
-// 			} else {
-// 				stFiles = append(stFiles, path)
-// 			}
-// 			return nil
-// 		},
-// 	)
-// }
-
 func NewInt(v int) *int {
 	return &v
 }

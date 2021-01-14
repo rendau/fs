@@ -2,22 +2,20 @@ package core
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/rendau/fs/internal/domain/errs"
+	"time"
 
 	"github.com/rendau/fs/internal/cns"
-
 	"github.com/rendau/fs/internal/domain/entities"
+	"github.com/rendau/fs/internal/domain/errs"
 	"github.com/rendau/fs/internal/domain/util"
 )
 
-func (c *St) Create(ctx context.Context, reqDir string, reqFileName string, reqFile io.Reader, unZip bool) (string, error) {
+func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, unZip bool) (string, error) {
 	if strings.Contains("/"+util.NormalizeUrlPath(reqDir), cns.ZipDirNamePrefix) {
 		return "", errs.BadDirName
 	}
@@ -96,7 +94,7 @@ func (c *St) Create(ctx context.Context, reqDir string, reqFileName string, reqF
 	return fileUrlRelPath, nil
 }
 
-func (c *St) Get(ctx context.Context, reqPath string, imgPars *entities.ImgParsSt, download bool) (string, []byte, error) {
+func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (string, []byte, error) {
 	var err error
 
 	absFsPath := filepath.Join(c.dirPath, util.NormalizeFsPath(reqPath))
@@ -158,4 +156,118 @@ func (c *St) Get(ctx context.Context, reqPath string, imgPars *entities.ImgParsS
 	}
 
 	return name, content, nil
+}
+
+func (c *St) Clean() {
+	c.wg.Add(1)
+	if c.testing {
+		c.cleanRoutine()
+	} else {
+		go c.cleanRoutine()
+	}
+}
+
+func (c *St) cleanRoutine() {
+	defer c.wg.Done()
+
+	const checkChunkSize int = 100
+
+	stop := false
+
+	rootDirPath := c.dirPath
+
+	var pathList []string
+
+	var totalCount uint64
+	var removedCount uint64
+
+	startTime := time.Now()
+
+	err := filepath.Walk(rootDirPath, func(p string, info os.FileInfo, err error) error {
+		if stop {
+			return filepath.SkipDir
+		}
+
+		if err != nil {
+			c.lg.Errorw("Fail to walk", err, "path", p)
+			return err
+		}
+
+		if info == nil {
+			return nil
+		}
+
+		if p == rootDirPath {
+			return nil
+		}
+
+		if len(pathList) >= checkChunkSize {
+			removedCount += c.cleanPathListRoutine(pathList)
+
+			pathList = nil
+
+			if stop = c.IsStopped(); stop {
+				return filepath.SkipDir
+			}
+		}
+
+		relPath, err := filepath.Rel(rootDirPath, p)
+		if err != nil {
+			c.lg.Errorw("Fail to get rel p", err, "path", p, "root_dir_path", rootDirPath)
+			return err
+		}
+
+		if info.IsDir() {
+			if !strings.HasPrefix(filepath.Base(relPath), cns.ZipDirNamePrefix) {
+				return nil
+			}
+
+			pathList = append(pathList, relPath+"/")
+
+			totalCount++
+
+			return filepath.SkipDir
+		}
+
+		pathList = append(pathList, relPath)
+
+		totalCount++
+
+		return nil
+	})
+	if err != nil {
+		c.lg.Errorw("Fail to walk dir", err)
+		return
+	}
+
+	removedCount += c.cleanPathListRoutine(pathList)
+
+	c.lg.Infow(
+		"Cleaned",
+		"total_count", totalCount,
+		"removed_count", removedCount,
+		"duration", time.Now().Sub(startTime).String(),
+	)
+}
+
+func (c *St) cleanPathListRoutine(pathList []string) uint64 {
+	if len(pathList) == 0 {
+		return 0
+	}
+
+	if c.IsStopped() {
+		return 0
+	}
+
+	rmPathList, err := c.cleaner.Check(pathList)
+	if err != nil {
+		return 0
+	}
+
+	for _, p := range rmPathList {
+		err = os.RemoveAll(filepath.Join(c.dirPath, p))
+		c.lg.Errorw("Fail to remove path", err, "path", p)
+	}
+
+	return uint64(len(rmPathList))
 }

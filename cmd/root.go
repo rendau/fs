@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rendau/fs/internal/adapters/cleaner/cleaner"
 	"github.com/rendau/fs/internal/adapters/httpapi/rest"
 	"github.com/rendau/fs/internal/adapters/logger/zap"
 	"github.com/rendau/fs/internal/domain/core"
@@ -24,6 +25,7 @@ func Execute() {
 
 	app := struct {
 		lg      *zap.St
+		cleaner *cleaner.St
 		core    *core.St
 		restApi *rest.St
 	}{}
@@ -33,11 +35,15 @@ func Execute() {
 		log.Fatal(err)
 	}
 
+	app.cleaner = cleaner.New(app.lg, viper.GetString("clean_api_url"))
+
 	app.core = core.New(
 		app.lg,
 		viper.GetString("dir_path"),
 		viper.GetInt("img.max_width"),
 		viper.GetInt("img.max_height"),
+		app.cleaner,
+		false,
 	)
 
 	app.restApi = rest.New(
@@ -74,6 +80,10 @@ func Execute() {
 		app.lg.Errorw("Fail to shutdown http-api", err)
 		exitCode = 1
 	}
+
+	app.lg.Infow("Wait routines...")
+
+	app.core.StopAndWaitJobs()
 
 	os.Exit(exitCode)
 }
