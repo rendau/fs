@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func NormalizeFsPath(v string) string {
+func ToFsPath(v string) string {
 	v = strings.ReplaceAll(v, "..", "")
 	v = strings.ReplaceAll(v, "./", "")
 	v = strings.ReplaceAll(v, "/.", "")
@@ -17,7 +17,7 @@ func NormalizeFsPath(v string) string {
 	return filepath.Join(strings.Split(v, "/")...)
 }
 
-func NormalizeUrlPath(v string) string {
+func ToUrlPath(v string) string {
 	return path.Join(strings.Split(strings.TrimPrefix(strings.TrimSuffix(v, "/"), "/"), "/")...)
 }
 
@@ -25,7 +25,7 @@ func GetDateUrlPath() string {
 	return time.Now().Format("2006/01/02")
 }
 
-func PathIsDir(p string) bool {
+func FsPathIsDir(p string) bool {
 	fileInfo, err := os.Stat(p)
 
 	return err == nil && fileInfo.IsDir()

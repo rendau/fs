@@ -30,7 +30,7 @@ func New(
 ) *St {
 	c := &St{
 		lg:           lg,
-		dirPath:      util.NormalizeFsPath(dirPath),
+		dirPath:      util.ToFsPath(dirPath),
 		imgMaxWidth:  imgMaxWidth,
 		imgMaxHeight: imgMaxHeight,
 		cleaner:      cleaner,

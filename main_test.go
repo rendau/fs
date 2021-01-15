@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -19,6 +20,7 @@ import (
 	"github.com/rendau/fs/internal/domain/core"
 	"github.com/rendau/fs/internal/domain/entities"
 	"github.com/rendau/fs/internal/domain/errs"
+	"github.com/rendau/fs/internal/domain/util"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 )
@@ -46,7 +48,7 @@ func cleanTestDir() {
 			return nil
 		}
 
-		// app.lg.Infow("cleanTestDir walk", "path", p)
+		// app.lg.Infow("cleanTestDir walk", "path", p, "name", info.Name(), "mt", info.ModTime())
 
 		if info.IsDir() {
 			err = os.RemoveAll(p)
@@ -281,6 +283,51 @@ func TestCreateZip(t *testing.T) {
 	require.Equal(t, "some html content", string(fContent))
 }
 
+func TestClean(t *testing.T) {
+	cleanTestDir()
+
+	dirStructure := [][2]string{
+		{"dir1", ""},
+		{"dir2/file1.txt", "file1 content"},
+		{"dir2/dir3/file2.txt", "file2 content"},
+		{"file3.txt", "file3 content"},
+	}
+
+	err := makeDirStructure(testDirPath, dirStructure)
+	require.Nil(t, err)
+
+	compareDirStructure(t, testDirPath, dirStructure)
+
+	checkedFiles := make([]string, 0)
+
+	app.cleaner.SetHandler(func(pathList []string) []string {
+		checkedFiles = append(checkedFiles, pathList...)
+		return []string{}
+	})
+
+	app.core.Clean(1000)
+
+	compareStringSlices(t, checkedFiles, []string{
+		"dir2/file1.txt",
+		"dir2/dir3/file2.txt",
+		"file3.txt",
+	})
+
+	compareDirStructure(t, testDirPath, dirStructure)
+
+	app.cleaner.SetHandler(func(pathList []string) []string {
+		return []string{
+			dirStructure[1][0],
+		}
+	})
+
+	app.core.Clean(1000)
+
+	dirStructure = append(dirStructure[:1], dirStructure[2:]...)
+
+	compareDirStructure(t, testDirPath, dirStructure)
+}
+
 func createZipArchive(items [][2]string) (*bytes.Buffer, error) {
 	result := new(bytes.Buffer)
 
@@ -338,4 +385,136 @@ func extractZipArchive(data []byte) ([][2]string, error) {
 	}
 
 	return result, nil
+}
+
+func compareDirStructure(t *testing.T, dirPath string, items [][2]string) {
+	diskItems := make([][2]string, 0)
+
+	err := filepath.Walk(dirPath, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info == nil {
+			return nil
+		}
+
+		if p == dirPath {
+			return nil
+		}
+
+		relP, err := filepath.Rel(dirPath, p)
+		if err != nil {
+			return err
+		}
+
+		relUrlP := util.ToUrlPath(relP)
+
+		if info.IsDir() {
+			diskItems = append(diskItems, [2]string{relUrlP, ""})
+		} else {
+			fileDataRaw, err := ioutil.ReadFile(p)
+			if err != nil {
+				return err
+			}
+
+			diskItems = append(diskItems, [2]string{relUrlP, string(fileDataRaw)})
+		}
+
+		return nil
+	})
+	require.Nil(t, err)
+
+	for _, dItem := range diskItems {
+		found := false
+		dItemIsDir := path.Ext(dItem[0]) == ""
+
+		for _, item := range items {
+			if dItemIsDir {
+				if strings.Contains(item[0], dItem[0]) {
+					found = true
+					break
+				}
+			} else {
+				if item[0] == dItem[0] {
+					require.Equal(t, item[1], dItem[1])
+					found = true
+					break
+				}
+			}
+		}
+
+		require.True(t, found, "Item not found", dItem[0])
+	}
+
+	for _, item := range items {
+		found := false
+
+		for _, dItem := range diskItems {
+			if item[0] == dItem[0] {
+				require.Equal(t, item[1], dItem[1])
+				found = true
+				break
+			}
+		}
+
+		require.True(t, found)
+	}
+}
+
+func makeDirStructure(parentDirPath string, items [][2]string) error {
+	var err error
+
+	for _, item := range items {
+		fsPath := util.ToFsPath(item[0])
+
+		if path.Ext(item[0]) == "" { // dir
+			err = os.MkdirAll(filepath.Join(parentDirPath, fsPath), os.ModePerm)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = os.MkdirAll(filepath.Join(parentDirPath, filepath.Dir(fsPath)), os.ModePerm)
+			if err != nil {
+				return err
+			}
+
+			err = ioutil.WriteFile(filepath.Join(parentDirPath, fsPath), []byte(item[1]), os.ModePerm)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func compareStringSlices(t *testing.T, a, b []string) {
+	require.Equal(t, len(a), len(b))
+
+	for _, aI := range a {
+		found := false
+
+		for _, bI := range b {
+			if bI == aI {
+				found = true
+				break
+			}
+		}
+
+		require.True(t, found)
+	}
+
+	for _, bI := range b {
+		found := false
+
+		for _, aI := range a {
+			if aI == bI {
+				found = true
+				break
+			}
+		}
+
+		require.True(t, found)
+	}
 }

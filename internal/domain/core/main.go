@@ -16,13 +16,13 @@ import (
 )
 
 func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, unZip bool) (string, error) {
-	if strings.Contains("/"+util.NormalizeUrlPath(reqDir), cns.ZipDirNamePrefix) {
+	if strings.Contains("/"+util.ToUrlPath(reqDir), cns.ZipDirNamePrefix) {
 		return "", errs.BadDirName
 	}
 
 	dateUrlPath := util.GetDateUrlPath()
 
-	absFsDirPath := filepath.Join(c.dirPath, util.NormalizeFsPath(reqDir), util.NormalizeFsPath(dateUrlPath))
+	absFsDirPath := filepath.Join(c.dirPath, util.ToFsPath(reqDir), util.ToFsPath(dateUrlPath))
 
 	err := os.MkdirAll(absFsDirPath, os.ModePerm)
 	if err != nil {
@@ -85,7 +85,7 @@ func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, unZip 
 		return "", err
 	}
 
-	fileUrlRelPath := util.NormalizeUrlPath(fileFsRelPath)
+	fileUrlRelPath := util.ToUrlPath(fileFsRelPath)
 
 	if isZipDir {
 		fileUrlRelPath += "/"
@@ -97,12 +97,12 @@ func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, unZip 
 func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (string, []byte, error) {
 	var err error
 
-	absFsPath := filepath.Join(c.dirPath, util.NormalizeFsPath(reqPath))
+	absFsPath := filepath.Join(c.dirPath, util.ToFsPath(reqPath))
 
 	var name string
 	var content = make([]byte, 0)
 
-	if util.PathIsDir(absFsPath) {
+	if util.FsPathIsDir(absFsPath) {
 		dirName := filepath.Base(absFsPath)
 
 		if strings.HasPrefix(dirName, cns.ZipDirNamePrefix) {
@@ -158,19 +158,17 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 	return name, content, nil
 }
 
-func (c *St) Clean() {
+func (c *St) Clean(checkChunkSize int) {
 	c.wg.Add(1)
 	if c.testing {
-		c.cleanRoutine()
+		c.cleanRoutine(checkChunkSize)
 	} else {
-		go c.cleanRoutine()
+		go c.cleanRoutine(checkChunkSize)
 	}
 }
 
-func (c *St) cleanRoutine() {
+func (c *St) cleanRoutine(checkChunkSize int) {
 	defer c.wg.Done()
-
-	const checkChunkSize int = 100
 
 	stop := false
 
@@ -218,7 +216,7 @@ func (c *St) cleanRoutine() {
 		}
 
 		if info.IsDir() {
-			if !strings.HasPrefix(filepath.Base(relPath), cns.ZipDirNamePrefix) {
+			if !strings.HasPrefix(info.Name(), cns.ZipDirNamePrefix) {
 				return nil
 			}
 
@@ -266,7 +264,9 @@ func (c *St) cleanPathListRoutine(pathList []string) uint64 {
 
 	for _, p := range rmPathList {
 		err = os.RemoveAll(filepath.Join(c.dirPath, p))
-		c.lg.Errorw("Fail to remove path", err, "path", p)
+		if err != nil {
+			c.lg.Errorw("Fail to remove path", err, "path", p)
+		}
 	}
 
 	return uint64(len(rmPathList))

@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func Test_NormalizeFsPath(t *testing.T) {
+func Test_ToFsPath(t *testing.T) {
 	type args struct {
 		v string
 	}
@@ -77,14 +77,14 @@ func Test_NormalizeFsPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NormalizeFsPath(tt.args.v); got != tt.want {
+			if got := ToFsPath(tt.args.v); got != tt.want {
 				t.Errorf("normalizeFsPath() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func Test_NormalizeUrlPath(t *testing.T) {
+func Test_ToUrlPath(t *testing.T) {
 	type args struct {
 		v string
 	}
@@ -126,7 +126,7 @@ func Test_NormalizeUrlPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NormalizeUrlPath(tt.args.v); got != tt.want {
+			if got := ToUrlPath(tt.args.v); got != tt.want {
 				t.Errorf("normalizeUrlPath() = %v, want %v", got, tt.want)
 			}
 		})
