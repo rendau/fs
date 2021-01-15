@@ -103,6 +103,8 @@ func TestMain(m *testing.M) {
 	// Start tests
 	code := m.Run()
 
+	cleanTestDir()
+
 	os.Exit(code)
 }
 
@@ -291,6 +293,10 @@ func TestClean(t *testing.T) {
 		{"dir2/file1.txt", "file1 content"},
 		{"dir2/dir3/file2.txt", "file2 content"},
 		{"file3.txt", "file3 content"},
+		{"dir5/" + cns.ZipDirNamePrefix + "q/a/js.js", "content"},
+		{"dir5/" + cns.ZipDirNamePrefix + "q/index.html", "content"},
+		{"dir5/" + cns.ZipDirNamePrefix + "q/css.css", "content"},
+		{"dir6/q" + cns.ZipDirNamePrefix + "/index.html", "content"},
 	}
 
 	err := makeDirStructure(testDirPath, dirStructure)
@@ -307,10 +313,14 @@ func TestClean(t *testing.T) {
 
 	app.core.Clean(1000)
 
+	dirStructure = dirStructure[1:]
+
 	compareStringSlices(t, checkedFiles, []string{
 		"dir2/file1.txt",
 		"dir2/dir3/file2.txt",
 		"file3.txt",
+		"dir5/" + cns.ZipDirNamePrefix + "q/",
+		"dir6/q" + cns.ZipDirNamePrefix + "/index.html",
 	})
 
 	compareDirStructure(t, testDirPath, dirStructure)
@@ -326,6 +336,34 @@ func TestClean(t *testing.T) {
 	dirStructure = append(dirStructure[:1], dirStructure[2:]...)
 
 	compareDirStructure(t, testDirPath, dirStructure)
+
+	app.cleaner.SetHandler(func(pathList []string) []string {
+		return pathList
+	})
+
+	app.core.Clean(1000)
+
+	dirStructure = [][2]string{}
+
+	compareDirStructure(t, testDirPath, dirStructure)
+
+	err = makeDirStructure(testDirPath, [][2]string{
+		{"dir1", ""},
+		{"dir2", ""},
+		{"dir2/dir3", ""},
+		{"dir2/dir3/dir4", ""},
+		{"dir2/dir5/dir6", ""},
+		{"dir2/dir5/file1.txt", "asd"},
+	})
+	require.Nil(t, err)
+
+	app.cleaner.SetHandler(func(pathList []string) []string { return []string{} })
+
+	app.core.Clean(1000)
+
+	compareDirStructure(t, testDirPath, [][2]string{
+		{"dir2/dir5/file1.txt", "asd"},
+	})
 }
 
 func createZipArchive(items [][2]string) (*bytes.Buffer, error) {
@@ -444,7 +482,7 @@ func compareDirStructure(t *testing.T, dirPath string, items [][2]string) {
 			}
 		}
 
-		require.True(t, found, "Item not found", dItem[0])
+		require.True(t, found, "Item not found %s", dItem[0])
 	}
 
 	for _, item := range items {
@@ -458,7 +496,7 @@ func compareDirStructure(t *testing.T, dirPath string, items [][2]string) {
 			}
 		}
 
-		require.True(t, found)
+		require.True(t, found, "Item not found %s", item[0])
 	}
 }
 
@@ -502,7 +540,7 @@ func compareStringSlices(t *testing.T, a, b []string) {
 			}
 		}
 
-		require.True(t, found)
+		require.True(t, found, "String not found %q", aI)
 	}
 
 	for _, bI := range b {
@@ -515,6 +553,6 @@ func compareStringSlices(t *testing.T, a, b []string) {
 			}
 		}
 
-		require.True(t, found)
+		require.True(t, found, "String not found %q", bI)
 	}
 }

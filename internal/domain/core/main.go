@@ -240,12 +240,91 @@ func (c *St) cleanRoutine(checkChunkSize int) {
 
 	removedCount += c.cleanPathListRoutine(pathList)
 
+	err = c.cleanRemoveEmptyDirs(rootDirPath)
+	if err != nil {
+		c.lg.Errorw("Fail to remove empty dirs", err)
+		return
+	}
+
 	c.lg.Infow(
 		"Cleaned",
 		"total_count", totalCount,
 		"removed_count", removedCount,
 		"duration", time.Now().Sub(startTime).String(),
 	)
+}
+
+func (c *St) cleanRemoveEmptyDirs(rootDirPath string) error {
+	dirs := map[string]uint64{}
+
+	err := filepath.Walk(rootDirPath, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info == nil {
+			return nil
+		}
+
+		if p == rootDirPath {
+			return nil
+		}
+
+		if parentPath := filepath.Dir(p); parentPath != rootDirPath {
+			dirs[parentPath]++
+		}
+
+		if info.IsDir() {
+			if _, ok := dirs[p]; !ok {
+				dirs[p] = 0
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	var rr func() error
+
+	rr = func() error {
+		for k, v := range dirs {
+			if k == rootDirPath {
+				continue
+			}
+
+			if v <= 0 {
+				parentPath := filepath.Dir(k)
+				if _, ok := dirs[parentPath]; ok {
+					dirs[parentPath]--
+				}
+
+				err = os.RemoveAll(k)
+				if err != nil {
+					return err
+				}
+
+				delete(dirs, k)
+
+				err = rr()
+				if err != nil {
+					return err
+				}
+
+				break
+			}
+		}
+
+		return nil
+	}
+
+	err = rr()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *St) cleanPathListRoutine(pathList []string) uint64 {

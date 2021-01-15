@@ -5,9 +5,11 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
+
+	cleanerMock "github.com/rendau/fs/internal/adapters/cleaner/mock"
+	"github.com/rendau/fs/internal/interfaces"
 
 	"github.com/rendau/fs/internal/adapters/cleaner/cleaner"
 	"github.com/rendau/fs/internal/adapters/httpapi/rest"
@@ -24,8 +26,8 @@ func Execute() {
 	debug := viper.GetBool("debug")
 
 	app := struct {
-		lg      *zap.St
-		cleaner *cleaner.St
+		lg      interfaces.Logger
+		cleaner interfaces.Cleaner
 		core    *core.St
 		restApi *rest.St
 	}{}
@@ -35,7 +37,11 @@ func Execute() {
 		log.Fatal(err)
 	}
 
-	app.cleaner = cleaner.New(app.lg, viper.GetString("clean_api_url"))
+	if viper.GetString("clean_api_url") != "" {
+		app.cleaner = cleaner.New(app.lg, viper.GetString("clean_api_url"))
+	} else {
+		app.cleaner = cleanerMock.New()
+	}
 
 	app.core = core.New(
 		app.lg,
@@ -101,13 +107,4 @@ func loadConf() {
 	_ = viper.ReadInConfig()
 
 	viper.AutomaticEnv()
-
-	// viper.Set("dir_path", uriRPadSlash(viper.GetString("dir_path")))
-}
-
-func uriRPadSlash(uri string) string {
-	if uri != "" && !strings.HasSuffix(uri, "/") {
-		return uri + "/"
-	}
-	return uri
 }
