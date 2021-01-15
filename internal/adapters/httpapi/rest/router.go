@@ -9,7 +9,8 @@ import (
 func (a *St) router() http.Handler {
 	r := mux.NewRouter()
 
-	r.PathPrefix("/").HandlerFunc(a.hRoot).Methods("GET")
+	r.HandleFunc("/", a.hSaveFile).Methods("POST")
+	r.HandleFunc("/", a.hSaveFile).Methods("GET")
 
 	return a.middleware(r)
 }

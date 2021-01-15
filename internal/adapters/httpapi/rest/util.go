@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -8,6 +9,16 @@ import (
 	"strings"
 	"time"
 )
+
+func (a *St) uRespondJSON(w http.ResponseWriter, obj interface{}) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(obj); err != nil {
+		a.lg.Infow("Fail to send response", "error", err)
+	}
+}
 
 func (a *St) uLogErrorRequest(r *http.Request, err interface{}, msg string) {
 	a.lg.Errorw(

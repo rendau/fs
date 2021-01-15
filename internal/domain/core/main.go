@@ -16,7 +16,7 @@ import (
 )
 
 func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, unZip bool) (string, error) {
-	if strings.Contains("/"+util.ToUrlPath(reqDir), cns.ZipDirNamePrefix) {
+	if strings.Contains("/"+util.ToUrlPath(reqDir), "/"+cns.ZipDirNamePrefix) {
 		return "", errs.BadDirName
 	}
 
