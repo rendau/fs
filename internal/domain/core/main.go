@@ -100,7 +100,7 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 	absFsPath := filepath.Join(c.dirPath, util.ToFsPath(reqPath))
 
 	name := ""
-	modTime := time.Now().AddDate(-1, 0, 0)
+	modTime := time.Now()
 	content := make([]byte, 0)
 
 	if util.FsPathIsDir(absFsPath) {
@@ -155,7 +155,9 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 			return "", modTime, nil, err
 		}
 
-		modTime = fInfo.ModTime()
+		if !download {
+			modTime = fInfo.ModTime()
+		}
 	}
 
 	return name, modTime, content, nil

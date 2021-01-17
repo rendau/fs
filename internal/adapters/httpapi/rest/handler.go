@@ -3,6 +3,7 @@ package rest
 import (
 	"bytes"
 	"net/http"
+	"path"
 
 	"github.com/rendau/fs/internal/domain/entities"
 
@@ -54,9 +55,9 @@ func (a *St) hGet(w http.ResponseWriter, r *http.Request) {
 		Height: a.uQpParseIntV(urlQuery, "h"),
 	}
 
-	download := a.uQpParseBoolV(urlQuery, "download")
+	download := a.uQpParseStringV(urlQuery, "download")
 
-	fName, fModTime, fData, err := a.cr.Get(urlPath, imgPars, download)
+	fName, fModTime, fData, err := a.cr.Get(urlPath, imgPars, download != "")
 	if err != nil {
 		switch cErr := err.(type) {
 		case errs.Err:
@@ -65,6 +66,12 @@ func (a *St) hGet(w http.ResponseWriter, r *http.Request) {
 			a.uRespondJSON(w, ErrRepSt{ErrorCode: errs.ServiceNA.Error()})
 		}
 		return
+	}
+
+	if download != "" {
+		download += path.Ext(fName)
+		w.Header().Set("Content-Type", `application/octet-stream`)
+		w.Header().Set("Content-Disposition", `attachment; filename="`+download+`"`)
 	}
 
 	http.ServeContent(w, r, fName, fModTime, bytes.NewReader(fData))
