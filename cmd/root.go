@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -48,6 +49,9 @@ func Execute() {
 		viper.GetString("dir_path"),
 		viper.GetInt("img.max_width"),
 		viper.GetInt("img.max_height"),
+		viper.GetString("wm_path"),
+		viper.GetFloat64("wm_opacity"),
+		parseWMarkDirPaths(viper.GetString("wm_dir_paths")),
 		app.cleaner,
 		false,
 	)
@@ -92,6 +96,18 @@ func Execute() {
 	app.core.StopAndWaitJobs()
 
 	os.Exit(exitCode)
+}
+
+func parseWMarkDirPaths(src string) []string {
+	result := make([]string, 0)
+
+	for _, p := range strings.Split(viper.GetString("wm_dir_paths"), ";") {
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+
+	return result
 }
 
 func loadConf() {

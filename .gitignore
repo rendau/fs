@@ -7,4 +7,5 @@ release/*
 build/
 test_dir/
 conf.yml
+wm.png
 /svc

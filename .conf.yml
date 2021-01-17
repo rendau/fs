@@ -2,6 +2,9 @@ debug: true
 log_level: info
 http_listen: ":3030"
 dir_path: "path/to/dir"
+wm_path: "wm.png"
+wm_opacity: "0.8"
+wm_dir_paths: "dir_path1;dir_path2;"
 clean_api_url: "http-url" # will request with PUT method, and send ["fil1", "fil2", ...] json-data
 img:
   max_width: 1000 # in pixels, not required

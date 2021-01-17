@@ -8,12 +8,14 @@ import (
 )
 
 type St struct {
-	lg           interfaces.Logger
-	dirPath      string
-	imgMaxWidth  int
-	imgMaxHeight int
-	cleaner      interfaces.Cleaner
-	testing      bool
+	lg            interfaces.Logger
+	dirPath       string
+	imgMaxWidth   int
+	imgMaxHeight  int
+	wMarkOpacity  float64
+	wMarkDirPaths []string
+	cleaner       interfaces.Cleaner
+	testing       bool
 
 	wg     sync.WaitGroup
 	stop   bool
@@ -25,16 +27,31 @@ func New(
 	dirPath string,
 	imgMaxWidth int,
 	imgMaxHeight int,
+	wMarkPath string,
+	wMarkOpacity float64,
+	wMarkDirPaths []string,
 	cleaner interfaces.Cleaner,
 	testing bool,
 ) *St {
 	c := &St{
-		lg:           lg,
-		dirPath:      util.ToFsPath(dirPath),
-		imgMaxWidth:  imgMaxWidth,
-		imgMaxHeight: imgMaxHeight,
-		cleaner:      cleaner,
-		testing:      testing,
+		lg:            lg,
+		dirPath:       util.ToFsPath(dirPath),
+		imgMaxWidth:   imgMaxWidth,
+		imgMaxHeight:  imgMaxHeight,
+		wMarkOpacity:  wMarkOpacity,
+		wMarkDirPaths: wMarkDirPaths,
+		cleaner:       cleaner,
+		testing:       testing,
+	}
+
+	c.imgLoadWMark(wMarkPath)
+
+	if c.wMarkOpacity == 0 {
+		c.wMarkOpacity = 1
+	}
+
+	for i := range c.wMarkDirPaths {
+		c.wMarkDirPaths[i] = util.ToFsPath(c.wMarkDirPaths[i])
 	}
 
 	return c

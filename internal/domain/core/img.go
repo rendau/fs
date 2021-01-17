@@ -1,6 +1,7 @@
 package core
 
 import (
+	"image"
 	"io"
 	"path/filepath"
 	"strings"
@@ -10,6 +11,8 @@ import (
 )
 
 var (
+	wMark image.Image
+
 	imgFileTypes = map[string]struct {
 		format      imaging.Format
 		contentType string
@@ -24,6 +27,19 @@ var (
 	}
 )
 
+func (c *St) imgLoadWMark(p string) {
+	var err error
+
+	if p != "" {
+		wMark, err = imaging.Open(p)
+		if err != nil {
+			c.lg.Errorw("Fail to load w-mark", err)
+
+			wMark = nil
+		}
+	}
+}
+
 func (c *St) imgHandle(fPath string, w io.Writer, pars *entities.ImgParsSt) error {
 	if pars.IsEmpty() {
 		return nil
@@ -36,6 +52,11 @@ func (c *St) imgHandle(fPath string, w io.Writer, pars *entities.ImgParsSt) erro
 		return nil
 	}
 
+	pM := pars.Method
+	pW := pars.Width
+	pH := pars.Height
+	pWMark := pars.WMark
+
 	hasChanges := false
 
 	img, err := imaging.Open(fPath, imaging.AutoOrientation(true))
@@ -45,10 +66,6 @@ func (c *St) imgHandle(fPath string, w io.Writer, pars *entities.ImgParsSt) erro
 	}
 
 	imgBounds := img.Bounds().Max
-
-	pM := pars.Method
-	pW := pars.Width
-	pH := pars.Height
 
 	if pW > 0 || pH > 0 {
 		if pW == 0 {
@@ -73,23 +90,22 @@ func (c *St) imgHandle(fPath string, w io.Writer, pars *entities.ImgParsSt) erro
 			} else {
 				img = imaging.Fill(img, pW, pH, imaging.Center, imaging.Lanczos)
 			}
+
+			imgBounds = img.Bounds().Max
 		}
 
 		hasChanges = true
 	}
 
-	// if hasWmark {
-	// 	imgBounds = img.Bounds().Max
-	// 	if imgBounds.X > 100 {
-	// 		for _, pr := range conf.Conf.WMarkServePathList {
-	// 			if strings.HasPrefix(fPath, pr) {
-	// 				wmarkResized := imaging.Resize(wmark, imgBounds.X/3, 0, imaging.Lanczos)
-	// 				img = imaging.OverlayCenter(img, wmarkResized, conf.Conf.WMarkOpacity)
-	// 				break
-	// 			}
-	// 		}
-	// 	}
-	// }
+	if pWMark && wMark != nil {
+		if imgBounds.X > 100 {
+			wMarkResized := imaging.Resize(wMark, imgBounds.X/3, 0, imaging.Lanczos)
+
+			img = imaging.OverlayCenter(img, wMarkResized, c.wMarkOpacity)
+
+			hasChanges = true
+		}
+	}
 
 	if hasChanges {
 		if w == nil {

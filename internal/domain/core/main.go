@@ -97,7 +97,8 @@ func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, unZip 
 func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (string, time.Time, []byte, error) {
 	var err error
 
-	absFsPath := filepath.Join(c.dirPath, util.ToFsPath(reqPath))
+	reqFsPath := util.ToFsPath(reqPath)
+	absFsPath := filepath.Join(c.dirPath, reqFsPath)
 
 	name := ""
 	modTime := time.Now()
@@ -139,6 +140,15 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 		return "", modTime, nil, errs.NotFound
 	}
 
+	if !strings.Contains("/"+reqFsPath, "/"+cns.ZipDirNamePrefix) {
+		for _, p := range c.wMarkDirPaths {
+			if strings.HasPrefix(reqFsPath, p) {
+				imgPars.WMark = true
+				break
+			}
+		}
+	}
+
 	if !imgPars.IsEmpty() {
 		buffer := new(bytes.Buffer)
 
@@ -147,8 +157,12 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 			return "", modTime, nil, err
 		}
 
-		content = buffer.Bytes()
-	} else {
+		if buffer.Len() > 0 {
+			content = buffer.Bytes()
+		}
+	}
+
+	if len(content) == 0 {
 		content, err = ioutil.ReadFile(absFsPath)
 		if err != nil {
 			c.lg.Errorw("Fail to read file", err, "f_path", absFsPath)
