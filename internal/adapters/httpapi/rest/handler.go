@@ -24,9 +24,11 @@ func (a *St) hSave(w http.ResponseWriter, r *http.Request) {
 
 	pFileName := header.Filename
 
+	pNoCut := r.PostFormValue("no_cut") == "true"
+
 	pExtractZip := r.PostFormValue("extract_zip") == "true"
 
-	result, err := a.cr.Create(pDir, pFileName, pFile, pExtractZip)
+	result, err := a.cr.Create(pDir, pFileName, pFile, pNoCut, pExtractZip)
 	if err != nil {
 		switch cErr := err.(type) {
 		case errs.Err:

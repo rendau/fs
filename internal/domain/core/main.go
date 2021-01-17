@@ -15,7 +15,7 @@ import (
 	"github.com/rendau/fs/internal/domain/util"
 )
 
-func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, unZip bool) (string, error) {
+func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, noCut bool, unZip bool) (string, error) {
 	if strings.Contains("/"+util.ToUrlPath(reqDir), "/"+cns.ZipDirNamePrefix) {
 		return "", errs.BadDirName
 	}
@@ -69,13 +69,15 @@ func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, unZip 
 			return "", err
 		}
 
-		err = c.imgHandle(targetFsPath, nil, &entities.ImgParsSt{
-			Method: "fit",
-			Width:  c.imgMaxWidth,
-			Height: c.imgMaxHeight,
-		})
-		if err != nil {
-			return "", err
+		if !noCut {
+			err = c.imgHandle(targetFsPath, nil, &entities.ImgParsSt{
+				Method: "fit",
+				Width:  c.imgMaxWidth,
+				Height: c.imgMaxHeight,
+			})
+			if err != nil {
+				return "", err
+			}
 		}
 	}
 
