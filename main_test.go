@@ -30,6 +30,12 @@ const testDirPath = "test_dir"
 const imgMaxWidth = 1000
 const imgMaxHeight = 1000
 
+type fsItemSt struct {
+	p  string
+	c  string
+	mt time.Time
+}
+
 var (
 	app = struct {
 		lg      *zap.St
@@ -106,7 +112,7 @@ func TestMain(m *testing.M) {
 	// Start tests
 	code := m.Run()
 
-	cleanTestDir()
+	// cleanTestDir()
 
 	os.Exit(code)
 }
@@ -206,16 +212,16 @@ func TestCreate(t *testing.T) {
 func TestCreateZip(t *testing.T) {
 	cleanTestDir()
 
-	zipContentIsSame := func(a, b [][2]string) {
+	zipContentIsSame := func(a, b []fsItemSt) {
 		require.Equal(t, len(a), len(b))
 
 		for _, ai := range a {
 			found := false
 
 			for _, bi := range b {
-				if bi[0] == ai[0] {
+				if bi.p == ai.p {
 					found = true
-					require.Equal(t, ai[1], bi[1])
+					require.Equal(t, ai.c, bi.c)
 					break
 				}
 			}
@@ -227,9 +233,9 @@ func TestCreateZip(t *testing.T) {
 			found := false
 
 			for _, ai := range a {
-				if ai[0] == bi[0] {
+				if ai.p == bi.p {
 					found = true
-					require.Equal(t, bi[1], ai[1])
+					require.Equal(t, bi.c, ai.c)
 					break
 				}
 			}
@@ -238,11 +244,11 @@ func TestCreateZip(t *testing.T) {
 		}
 	}
 
-	srcZipFiles := [][2]string{
-		{"index.html", "some html content"},
-		{"abc/file.txt", "file content"},
-		{"abc/qwe/x.txt", "x content"},
-		{"todo.txt", "todo content"},
+	srcZipFiles := []fsItemSt{
+		{p: "index.html", c: "some html content"},
+		{p: "abc/file.txt", c: "file content"},
+		{p: "abc/qwe/x.txt", c: "x content"},
+		{p: "todo.txt", c: "todo content"},
 	}
 
 	zipBuffer, err := createZipArchive(srcZipFiles)
@@ -261,10 +267,10 @@ func TestCreateZip(t *testing.T) {
 	require.True(t, strings.HasSuffix(fPath, "/"))
 
 	for _, zp := range srcZipFiles {
-		_, _, fContent, err := app.core.Get(fPath+zp[0], &entities.ImgParsSt{}, false)
+		_, _, fContent, err := app.core.Get(fPath+zp.p, &entities.ImgParsSt{}, false)
 		require.Nil(t, err)
 		require.NotNil(t, fContent)
-		require.Equal(t, zp[1], string(fContent))
+		require.Equal(t, zp.c, string(fContent))
 	}
 
 	fName, _, fContent, err := app.core.Get(fPath, &entities.ImgParsSt{}, false)
@@ -282,11 +288,11 @@ func TestCreateZip(t *testing.T) {
 	require.Nil(t, err)
 	zipContentIsSame(srcZipFiles, resultZipFiles)
 
-	srcZipFiles = [][2]string{
-		{"root/index.html", "some html content"},
-		{"root/abc/file.txt", "file content"},
-		{"root/abc/qwe/x.txt", "x content"},
-		{"root/todo.txt", "todo content"},
+	srcZipFiles = []fsItemSt{
+		{p: "root/index.html", c: "some html content"},
+		{p: "root/abc/file.txt", c: "file content"},
+		{p: "root/abc/qwe/x.txt", c: "x content"},
+		{p: "root/todo.txt", c: "todo content"},
 	}
 
 	zipBuffer, err = createZipArchive(srcZipFiles)
@@ -297,10 +303,10 @@ func TestCreateZip(t *testing.T) {
 	require.True(t, strings.HasSuffix(fPath, "/"))
 
 	for _, zp := range srcZipFiles {
-		_, _, fContent, err := app.core.Get(fPath+strings.TrimLeft(zp[0], "root/"), &entities.ImgParsSt{}, false)
+		_, _, fContent, err := app.core.Get(fPath+strings.TrimLeft(zp.p, "root/"), &entities.ImgParsSt{}, false)
 		require.Nil(t, err)
 		require.NotNil(t, fContent)
-		require.Equal(t, zp[1], string(fContent))
+		require.Equal(t, zp.c, string(fContent))
 	}
 
 	fName, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{}, false)
@@ -313,15 +319,17 @@ func TestCreateZip(t *testing.T) {
 func TestClean(t *testing.T) {
 	cleanTestDir()
 
-	dirStructure := [][2]string{
-		{"dir1", ""},
-		{"dir2/file1.txt", "file1 content"},
-		{"dir2/dir3/file2.txt", "file2 content"},
-		{"file3.txt", "file3 content"},
-		{"dir5/" + cns.ZipDirNamePrefix + "q/a/js.js", "content"},
-		{"dir5/" + cns.ZipDirNamePrefix + "q/index.html", "content"},
-		{"dir5/" + cns.ZipDirNamePrefix + "q/css.css", "content"},
-		{"dir6/q" + cns.ZipDirNamePrefix + "/index.html", "content"},
+	cleanTime := time.Now().AddDate(0, 0, -cns.CleanFileNotCheckPeriodDays-1)
+
+	dirStructure := []fsItemSt{
+		{p: "dir1", c: "", mt: cleanTime},
+		{p: "dir2/file1.txt", c: "file1 content", mt: cleanTime},
+		{p: "dir2/dir3/file2.txt", c: "file2 content", mt: cleanTime},
+		{p: "file3.txt", c: "file3 content", mt: cleanTime},
+		{p: "dir5/" + cns.ZipDirNamePrefix + "q/a/js.js", c: "content", mt: cleanTime},
+		{p: "dir5/" + cns.ZipDirNamePrefix + "q/index.html", c: "content", mt: cleanTime},
+		{p: "dir5/" + cns.ZipDirNamePrefix + "q/css.css", c: "content", mt: cleanTime},
+		{p: "dir6/q" + cns.ZipDirNamePrefix + "/index.html", c: "content", mt: cleanTime},
 	}
 
 	err := makeDirStructure(testDirPath, dirStructure)
@@ -340,19 +348,19 @@ func TestClean(t *testing.T) {
 
 	dirStructure = dirStructure[1:]
 
-	compareStringSlices(t, checkedFiles, []string{
+	compareStringSlices(t, []string{
 		"dir2/file1.txt",
 		"dir2/dir3/file2.txt",
 		"file3.txt",
 		"dir5/" + cns.ZipDirNamePrefix + "q/",
 		"dir6/q" + cns.ZipDirNamePrefix + "/index.html",
-	})
+	}, checkedFiles)
 
 	compareDirStructure(t, testDirPath, dirStructure)
 
 	app.cleaner.SetHandler(func(pathList []string) []string {
 		return []string{
-			dirStructure[1][0],
+			dirStructure[1].p,
 		}
 	})
 
@@ -362,23 +370,46 @@ func TestClean(t *testing.T) {
 
 	compareDirStructure(t, testDirPath, dirStructure)
 
+	checkedFiles = make([]string, 0)
+
 	app.cleaner.SetHandler(func(pathList []string) []string {
+		checkedFiles = append(checkedFiles, pathList...)
 		return pathList
 	})
 
+	err = os.Chtimes(filepath.Join(testDirPath, "file3.txt"), time.Now(), time.Now())
+	require.Nil(t, err)
+
+	err = os.Chtimes(filepath.Join(testDirPath, "dir5", cns.ZipDirNamePrefix+"q"), time.Now(), time.Now())
+	require.Nil(t, err)
+
 	app.core.Clean(0)
 
-	dirStructure = [][2]string{}
+	dirStructure = []fsItemSt{
+		{p: "file3.txt", c: "file3 content", mt: cleanTime},
+		{p: "dir5/" + cns.ZipDirNamePrefix + "q/a/js.js", c: "content", mt: cleanTime},
+		{p: "dir5/" + cns.ZipDirNamePrefix + "q/index.html", c: "content", mt: cleanTime},
+		{p: "dir5/" + cns.ZipDirNamePrefix + "q/css.css", c: "content", mt: cleanTime},
+	}
+
+	app.lg.Info(checkedFiles)
+
+	compareStringSlices(t, []string{
+		"dir2/file1.txt",
+		"dir6/q" + cns.ZipDirNamePrefix + "/index.html",
+	}, checkedFiles)
 
 	compareDirStructure(t, testDirPath, dirStructure)
 
-	err = makeDirStructure(testDirPath, [][2]string{
-		{"dir1", ""},
-		{"dir2", ""},
-		{"dir2/dir3", ""},
-		{"dir2/dir3/dir4", ""},
-		{"dir2/dir5/dir6", ""},
-		{"dir2/dir5/file1.txt", "asd"},
+	cleanTestDir()
+
+	err = makeDirStructure(testDirPath, []fsItemSt{
+		{p: "dir1", c: "", mt: cleanTime},
+		{p: "dir2", c: "", mt: cleanTime},
+		{p: "dir2/dir3", c: "", mt: cleanTime},
+		{p: "dir2/dir3/dir4", c: "", mt: cleanTime},
+		{p: "dir2/dir5/dir6", c: "", mt: cleanTime},
+		{p: "dir2/dir5/file1.txt", c: "asd", mt: cleanTime},
 	})
 	require.Nil(t, err)
 
@@ -386,23 +417,23 @@ func TestClean(t *testing.T) {
 
 	app.core.Clean(0)
 
-	compareDirStructure(t, testDirPath, [][2]string{
-		{"dir2/dir5/file1.txt", "asd"},
+	compareDirStructure(t, testDirPath, []fsItemSt{
+		{p: "dir2/dir5/file1.txt", c: "asd"},
 	})
 }
 
-func createZipArchive(items [][2]string) (*bytes.Buffer, error) {
+func createZipArchive(items []fsItemSt) (*bytes.Buffer, error) {
 	result := new(bytes.Buffer)
 
 	zipWriter := zip.NewWriter(result)
 	defer zipWriter.Close()
 
 	for _, item := range items {
-		f, err := zipWriter.Create(item[0])
+		f, err := zipWriter.Create(item.p)
 		if err != nil {
 			log.Fatal(err)
 		}
-		_, err = f.Write([]byte(item[1]))
+		_, err = f.Write([]byte(item.c))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -411,13 +442,13 @@ func createZipArchive(items [][2]string) (*bytes.Buffer, error) {
 	return result, nil
 }
 
-func extractZipArchive(data []byte) ([][2]string, error) {
+func extractZipArchive(data []byte) ([]fsItemSt, error) {
 	reader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([][2]string, 0)
+	result := make([]fsItemSt, 0)
 
 	fileHandler := func(f *zip.File) error {
 		if f.FileInfo().IsDir() {
@@ -435,7 +466,7 @@ func extractZipArchive(data []byte) ([][2]string, error) {
 			return err
 		}
 
-		result = append(result, [2]string{f.Name, string(srcFileDataRaw)})
+		result = append(result, fsItemSt{p: f.Name, c: string(srcFileDataRaw), mt: f.Modified})
 
 		return nil
 	}
@@ -450,8 +481,8 @@ func extractZipArchive(data []byte) ([][2]string, error) {
 	return result, nil
 }
 
-func compareDirStructure(t *testing.T, dirPath string, items [][2]string) {
-	diskItems := make([][2]string, 0)
+func compareDirStructure(t *testing.T, dirPath string, items []fsItemSt) {
+	diskItems := make([]fsItemSt, 0)
 
 	err := filepath.Walk(dirPath, func(p string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -474,14 +505,14 @@ func compareDirStructure(t *testing.T, dirPath string, items [][2]string) {
 		relUrlP := util.ToUrlPath(relP)
 
 		if info.IsDir() {
-			diskItems = append(diskItems, [2]string{relUrlP, ""})
+			diskItems = append(diskItems, fsItemSt{p: relUrlP})
 		} else {
 			fileDataRaw, err := ioutil.ReadFile(p)
 			if err != nil {
 				return err
 			}
 
-			diskItems = append(diskItems, [2]string{relUrlP, string(fileDataRaw)})
+			diskItems = append(diskItems, fsItemSt{p: relUrlP, c: string(fileDataRaw)})
 		}
 
 		return nil
@@ -490,61 +521,75 @@ func compareDirStructure(t *testing.T, dirPath string, items [][2]string) {
 
 	for _, dItem := range diskItems {
 		found := false
-		dItemIsDir := path.Ext(dItem[0]) == ""
+		dItemIsDir := path.Ext(dItem.p) == ""
 
 		for _, item := range items {
 			if dItemIsDir {
-				if strings.Contains(item[0], dItem[0]) {
+				if strings.Contains(item.p, dItem.p) {
 					found = true
 					break
 				}
 			} else {
-				if item[0] == dItem[0] {
-					require.Equal(t, item[1], dItem[1])
+				if item.p == dItem.p {
+					require.Equal(t, item.c, dItem.c)
 					found = true
 					break
 				}
 			}
 		}
 
-		require.True(t, found, "Item not found %s", dItem[0])
+		require.True(t, found, "Item not found %s", dItem.p)
 	}
 
 	for _, item := range items {
 		found := false
 
 		for _, dItem := range diskItems {
-			if item[0] == dItem[0] {
-				require.Equal(t, item[1], dItem[1])
+			if item.p == dItem.p {
+				require.Equal(t, item.c, dItem.c)
 				found = true
 				break
 			}
 		}
 
-		require.True(t, found, "Item not found %s", item[0])
+		require.True(t, found, "Item not found %s", item.p)
 	}
 }
 
-func makeDirStructure(parentDirPath string, items [][2]string) error {
+func makeDirStructure(parentDirPath string, items []fsItemSt) error {
 	var err error
 
 	for _, item := range items {
-		fsPath := util.ToFsPath(item[0])
+		fsAbsPath := filepath.Join(util.ToFsPath(parentDirPath), util.ToFsPath(item.p))
 
-		if path.Ext(item[0]) == "" { // dir
-			err = os.MkdirAll(filepath.Join(parentDirPath, fsPath), os.ModePerm)
+		if path.Ext(item.p) == "" { // dir
+			err = os.MkdirAll(fsAbsPath, os.ModePerm)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = os.MkdirAll(filepath.Join(parentDirPath, filepath.Dir(fsPath)), os.ModePerm)
+			err = os.MkdirAll(filepath.Dir(fsAbsPath), os.ModePerm)
 			if err != nil {
 				return err
 			}
 
-			err = ioutil.WriteFile(filepath.Join(parentDirPath, fsPath), []byte(item[1]), os.ModePerm)
+			err = ioutil.WriteFile(fsAbsPath, []byte(item.c), os.ModePerm)
 			if err != nil {
 				return err
+			}
+
+			if !item.mt.IsZero() {
+				err = os.Chtimes(fsAbsPath, item.mt, item.mt)
+				if err != nil {
+					return err
+				}
+
+				if ind := strings.Index(fsAbsPath, "/"+cns.ZipDirNamePrefix); ind > -1 {
+					err = os.Chtimes(fsAbsPath[:ind+len("/"+cns.ZipDirNamePrefix)+1], item.mt, item.mt)
+					if err != nil {
+						return err
+					}
+				}
 			}
 		}
 	}

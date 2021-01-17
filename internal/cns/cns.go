@@ -1,6 +1,7 @@
 package cns
 
 const (
-	DefaultCleanChunkSize = 100
-	ZipDirNamePrefix      = "__fs-zip-dir_"
+	ZipDirNamePrefix            = "__fs-zip-dir_"
+	DefaultCleanChunkSize       = 100
+	CleanFileNotCheckPeriodDays = 3
 )

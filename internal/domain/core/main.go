@@ -224,6 +224,8 @@ func (c *St) cleanRoutine(checkChunkSize int) {
 			return nil
 		}
 
+		mtIsAllowed := info.ModTime().AddDate(0, 0, cns.CleanFileNotCheckPeriodDays).Before(time.Now())
+
 		if len(pathList) >= checkChunkSize {
 			removedCount += c.cleanPathListRoutine(pathList)
 
@@ -245,11 +247,19 @@ func (c *St) cleanRoutine(checkChunkSize int) {
 				return nil
 			}
 
+			if !mtIsAllowed {
+				return filepath.SkipDir
+			}
+
 			pathList = append(pathList, relPath+"/")
 
 			totalCount++
 
 			return filepath.SkipDir
+		}
+
+		if !mtIsAllowed {
+			return nil
 		}
 
 		pathList = append(pathList, relPath)
@@ -280,6 +290,10 @@ func (c *St) cleanRoutine(checkChunkSize int) {
 }
 
 func (c *St) cleanRemoveEmptyDirs(rootDirPath string) error {
+	if c.IsStopped() {
+		return nil
+	}
+
 	dirs := map[string]uint64{}
 
 	err := filepath.Walk(rootDirPath, func(p string, info os.FileInfo, err error) error {
