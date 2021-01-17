@@ -127,7 +127,7 @@ func TestCreate(t *testing.T) {
 	require.True(t, strings.HasPrefix(fPath, fPathPrefix))
 	require.False(t, strings.Contains(strings.TrimPrefix(fPath, fPathPrefix), "/"))
 
-	fName, fContent, err := app.core.Get(fPath, &entities.ImgParsSt{}, false)
+	fName, _, fContent, err := app.core.Get(fPath, &entities.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 	require.Equal(t, "test_data", string(fContent))
@@ -144,7 +144,7 @@ func TestCreate(t *testing.T) {
 	fPath, err = app.core.Create("photos", "a.jpg", bytes.NewBuffer(largeImgBuffer.Bytes()), false)
 	require.Nil(t, err)
 
-	fName, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{}, false)
+	fName, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -155,7 +155,7 @@ func TestCreate(t *testing.T) {
 	require.Equal(t, imgMaxWidth, imgBounds.X)
 	require.Equal(t, imgMaxHeight, imgBounds.X)
 
-	fName, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{Method: "fit", Width: imgMaxWidth - 10, Height: imgMaxHeight - 10}, false)
+	fName, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{Method: "fit", Width: imgMaxWidth - 10, Height: imgMaxHeight - 10}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -166,7 +166,7 @@ func TestCreate(t *testing.T) {
 	require.Equal(t, imgMaxWidth-10, imgBounds.X)
 	require.Equal(t, imgMaxHeight-10, imgBounds.X)
 
-	fName, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{Method: "fit", Width: imgMaxWidth + 10, Height: imgMaxHeight + 10}, false)
+	fName, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{Method: "fit", Width: imgMaxWidth + 10, Height: imgMaxHeight + 10}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -236,19 +236,19 @@ func TestCreateZip(t *testing.T) {
 	require.True(t, strings.HasSuffix(fPath, "/"))
 
 	for _, zp := range srcZipFiles {
-		_, fContent, err := app.core.Get(fPath+zp[0], &entities.ImgParsSt{}, false)
+		_, _, fContent, err := app.core.Get(fPath+zp[0], &entities.ImgParsSt{}, false)
 		require.Nil(t, err)
 		require.NotNil(t, fContent)
 		require.Equal(t, zp[1], string(fContent))
 	}
 
-	fName, fContent, err := app.core.Get(fPath, &entities.ImgParsSt{}, false)
+	fName, _, fContent, err := app.core.Get(fPath, &entities.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.Equal(t, "index.html", fName)
 	require.NotNil(t, fContent)
 	require.Equal(t, "some html content", string(fContent))
 
-	fName, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{}, true)
+	fName, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{}, true)
 	require.Nil(t, err)
 	require.True(t, strings.HasSuffix(fName, ".zip"))
 	require.NotNil(t, fContent)
@@ -272,13 +272,13 @@ func TestCreateZip(t *testing.T) {
 	require.True(t, strings.HasSuffix(fPath, "/"))
 
 	for _, zp := range srcZipFiles {
-		_, fContent, err := app.core.Get(fPath+strings.TrimLeft(zp[0], "root/"), &entities.ImgParsSt{}, false)
+		_, _, fContent, err := app.core.Get(fPath+strings.TrimLeft(zp[0], "root/"), &entities.ImgParsSt{}, false)
 		require.Nil(t, err)
 		require.NotNil(t, fContent)
 		require.Equal(t, zp[1], string(fContent))
 	}
 
-	fName, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{}, false)
+	fName, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.Equal(t, "index.html", fName)
 	require.NotNil(t, fContent)
@@ -311,7 +311,7 @@ func TestClean(t *testing.T) {
 		return []string{}
 	})
 
-	app.core.Clean(1000)
+	app.core.Clean(0)
 
 	dirStructure = dirStructure[1:]
 
@@ -331,7 +331,7 @@ func TestClean(t *testing.T) {
 		}
 	})
 
-	app.core.Clean(1000)
+	app.core.Clean(0)
 
 	dirStructure = append(dirStructure[:1], dirStructure[2:]...)
 
@@ -341,7 +341,7 @@ func TestClean(t *testing.T) {
 		return pathList
 	})
 
-	app.core.Clean(1000)
+	app.core.Clean(0)
 
 	dirStructure = [][2]string{}
 
@@ -359,7 +359,7 @@ func TestClean(t *testing.T) {
 
 	app.cleaner.SetHandler(func(pathList []string) []string { return []string{} })
 
-	app.core.Clean(1000)
+	app.core.Clean(0)
 
 	compareDirStructure(t, testDirPath, [][2]string{
 		{"dir2/dir5/file1.txt", "asd"},

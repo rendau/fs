@@ -94,13 +94,14 @@ func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, unZip 
 	return fileUrlRelPath, nil
 }
 
-func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (string, []byte, error) {
+func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (string, time.Time, []byte, error) {
 	var err error
 
 	absFsPath := filepath.Join(c.dirPath, util.ToFsPath(reqPath))
 
-	var name string
-	var content = make([]byte, 0)
+	name := ""
+	modTime := time.Now().AddDate(-1, 0, 0)
+	content := make([]byte, 0)
 
 	if util.FsPathIsDir(absFsPath) {
 		dirName := filepath.Base(absFsPath)
@@ -109,19 +110,19 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 			if download {
 				archiveBuffer, err := c.zipCompressDir(absFsPath)
 				if err != nil {
-					return "", nil, err
+					return "", modTime, nil, err
 				}
 
-				return "archive.zip", archiveBuffer.Bytes(), nil
+				return "archive.zip", modTime, archiveBuffer.Bytes(), nil
 			} else if strings.HasSuffix(reqPath, "/") {
 				absFsPath = filepath.Join(absFsPath, "index.html")
 				name = "index.html"
 				imgPars.Reset()
 			} else {
-				return "", nil, errs.NotFound
+				return "", modTime, nil, errs.NotFound
 			}
 		} else {
-			return "", nil, errs.NotFound
+			return "", modTime, nil, errs.NotFound
 		}
 	} else {
 		_, name = filepath.Split(absFsPath)
@@ -132,10 +133,10 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 		if !os.IsNotExist(err) {
 			c.lg.Errorw("Fail to get stat of file", err, "f_path", absFsPath)
 		}
-		return "", nil, errs.NotFound
+		return "", modTime, nil, errs.NotFound
 	}
 	if fInfo.IsDir() { // if "index.html" is dir
-		return "", nil, errs.NotFound
+		return "", modTime, nil, errs.NotFound
 	}
 
 	if !imgPars.IsEmpty() {
@@ -143,7 +144,7 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 
 		err = c.imgHandle(absFsPath, buffer, imgPars)
 		if err != nil {
-			return "", nil, err
+			return "", modTime, nil, err
 		}
 
 		content = buffer.Bytes()
@@ -151,14 +152,20 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 		content, err = ioutil.ReadFile(absFsPath)
 		if err != nil {
 			c.lg.Errorw("Fail to read file", err, "f_path", absFsPath)
-			return "", nil, err
+			return "", modTime, nil, err
 		}
+
+		modTime = fInfo.ModTime()
 	}
 
-	return name, content, nil
+	return name, modTime, content, nil
 }
 
 func (c *St) Clean(checkChunkSize int) {
+	if checkChunkSize == 0 {
+		checkChunkSize = cns.DefaultCleanChunkSize
+	}
+
 	c.wg.Add(1)
 	if c.testing {
 		c.cleanRoutine(checkChunkSize)

@@ -63,9 +63,17 @@ func (c *St) zipExtract(archive io.Reader, dstDirPath string) error {
 		return nil
 	}
 
+	filter := func(p string) bool {
+		return strings.Contains("/"+p, "__MACOSX")
+	}
+
 	var skipDirPrefix string
 
 	for _, f := range reader.File {
+		if filter(f.Name) {
+			continue
+		}
+
 		fPathSlice := strings.SplitN(f.Name, "/", 2)
 
 		if len(fPathSlice) > 1 {
@@ -86,6 +94,10 @@ func (c *St) zipExtract(archive io.Reader, dstDirPath string) error {
 	}
 
 	for _, f := range reader.File {
+		if filter(f.Name) {
+			continue
+		}
+
 		err = fileHandler(f, skipDirPrefix)
 		if err != nil {
 			return err

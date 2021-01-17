@@ -1,12 +1,15 @@
 package rest
 
 import (
+	"bytes"
 	"net/http"
+
+	"github.com/rendau/fs/internal/domain/entities"
 
 	"github.com/rendau/fs/internal/domain/errs"
 )
 
-func (a *St) hSaveFile(w http.ResponseWriter, r *http.Request) {
+func (a *St) hSave(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	pDir := r.PostFormValue("dir")
@@ -36,4 +39,39 @@ func (a *St) hSaveFile(w http.ResponseWriter, r *http.Request) {
 	a.uRespondJSON(w, map[string]string{
 		"path": result,
 	})
+}
+
+func (a *St) hGet(w http.ResponseWriter, r *http.Request) {
+	var err error
+
+	urlPath := r.URL.Path
+
+	urlQuery := r.URL.Query()
+
+	imgPars := &entities.ImgParsSt{
+		Method: a.uQpParseStringV(urlQuery, "m"),
+		Width:  a.uQpParseIntV(urlQuery, "w"),
+		Height: a.uQpParseIntV(urlQuery, "h"),
+	}
+
+	download := a.uQpParseBoolV(urlQuery, "download")
+
+	fName, fModTime, fData, err := a.cr.Get(urlPath, imgPars, download)
+	if err != nil {
+		switch cErr := err.(type) {
+		case errs.Err:
+			a.uRespondJSON(w, ErrRepSt{ErrorCode: cErr.Error()})
+		default:
+			a.uRespondJSON(w, ErrRepSt{ErrorCode: errs.ServiceNA.Error()})
+		}
+		return
+	}
+
+	http.ServeContent(w, r, fName, fModTime, bytes.NewReader(fData))
+}
+
+func (a *St) hClean(w http.ResponseWriter, r *http.Request) {
+	a.cr.Clean(0)
+
+	w.WriteHeader(200)
 }

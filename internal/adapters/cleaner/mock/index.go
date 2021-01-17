@@ -17,5 +17,5 @@ func (m *St) Check(pathList []string) ([]string, error) {
 		return m.handler(pathList), nil
 	}
 
-	return nil, nil
+	return []string{}, nil
 }
