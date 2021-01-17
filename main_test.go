@@ -153,7 +153,7 @@ func TestCreate(t *testing.T) {
 	fPath, err = app.core.Create("photos", "a.jpg", largeImgBuffer, true, false)
 	require.Nil(t, err)
 
-	fName, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{}, false)
+	_, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -175,7 +175,7 @@ func TestCreate(t *testing.T) {
 	fPath, err = app.core.Create("photos", "a.jpg", largeImgBuffer, false, false)
 	require.Nil(t, err)
 
-	fName, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{}, false)
+	_, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -186,7 +186,7 @@ func TestCreate(t *testing.T) {
 	require.Equal(t, imgMaxWidth, imgBounds.X)
 	require.Equal(t, imgMaxHeight, imgBounds.X)
 
-	fName, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{Method: "fit", Width: imgMaxWidth - 10, Height: imgMaxHeight - 10}, false)
+	_, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{Method: "fit", Width: imgMaxWidth - 10, Height: imgMaxHeight - 10}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -197,7 +197,7 @@ func TestCreate(t *testing.T) {
 	require.Equal(t, imgMaxWidth-10, imgBounds.X)
 	require.Equal(t, imgMaxHeight-10, imgBounds.X)
 
-	fName, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{Method: "fit", Width: imgMaxWidth + 10, Height: imgMaxHeight + 10}, false)
+	_, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{Method: "fit", Width: imgMaxWidth + 10, Height: imgMaxHeight + 10}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 

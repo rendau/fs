@@ -17,7 +17,7 @@ func (a *St) hSave(w http.ResponseWriter, r *http.Request) {
 
 	pFile, header, err := r.FormFile("file")
 	if err != nil {
-		a.uRespondJSON(w, ErrRepSt{ErrorCode: "bad_file"})
+		a.uRespondJSON(w, errRepSt{ErrorCode: "bad_file"})
 		return
 	}
 	defer pFile.Close()
@@ -32,9 +32,9 @@ func (a *St) hSave(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch cErr := err.(type) {
 		case errs.Err:
-			a.uRespondJSON(w, ErrRepSt{ErrorCode: cErr.Error()})
+			a.uRespondJSON(w, errRepSt{ErrorCode: cErr.Error()})
 		default:
-			a.uRespondJSON(w, ErrRepSt{ErrorCode: errs.ServiceNA.Error()})
+			a.uRespondJSON(w, errRepSt{ErrorCode: errs.ServiceNA.Error()})
 		}
 		return
 	}
@@ -63,9 +63,9 @@ func (a *St) hGet(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch cErr := err.(type) {
 		case errs.Err:
-			a.uRespondJSON(w, ErrRepSt{ErrorCode: cErr.Error()})
+			a.uRespondJSON(w, errRepSt{ErrorCode: cErr.Error()})
 		default:
-			a.uRespondJSON(w, ErrRepSt{ErrorCode: errs.ServiceNA.Error()})
+			a.uRespondJSON(w, errRepSt{ErrorCode: errs.ServiceNA.Error()})
 		}
 		return
 	}

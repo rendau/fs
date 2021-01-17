@@ -1,5 +1,5 @@
 package rest
 
-type ErrRepSt struct {
+type errRepSt struct {
 	ErrorCode string `json:"error_code"`
 }
