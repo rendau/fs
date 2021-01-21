@@ -2,7 +2,9 @@ package rest
 
 import (
 	"net/http"
+	"os"
 
+	"github.com/gorilla/handlers"
 	"github.com/rs/cors"
 )
 
@@ -24,6 +26,8 @@ func (a *St) middleware(h http.Handler) http.Handler {
 		AllowCredentials: true,
 		MaxAge:           604800,
 	}).Handler(h)
+
+	h = handlers.LoggingHandler(os.Stdout, h)
 
 	return h
 }
