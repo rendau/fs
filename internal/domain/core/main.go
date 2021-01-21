@@ -289,6 +289,32 @@ func (c *St) cleanRoutine(checkChunkSize int) {
 	)
 }
 
+func (c *St) cleanPathListRoutine(pathList []string) uint64 {
+	if len(pathList) == 0 {
+		return 0
+	}
+
+	if c.IsStopped() {
+		return 0
+	}
+
+	rmPathList, err := c.cleaner.Check(pathList)
+	if err != nil {
+		return 0
+	}
+
+	for _, p := range rmPathList {
+		c.lg.Infow("Want to remove", "f_path", p)
+
+		// err = os.RemoveAll(filepath.Join(c.dirPath, p))
+		// if err != nil {
+		// 	c.lg.Errorw("Fail to remove path", err, "path", p)
+		// }
+	}
+
+	return uint64(len(rmPathList))
+}
+
 func (c *St) cleanRemoveEmptyDirs(rootDirPath string) error {
 	if c.IsStopped() {
 		return nil
@@ -364,28 +390,4 @@ func (c *St) cleanRemoveEmptyDirs(rootDirPath string) error {
 	}
 
 	return nil
-}
-
-func (c *St) cleanPathListRoutine(pathList []string) uint64 {
-	if len(pathList) == 0 {
-		return 0
-	}
-
-	if c.IsStopped() {
-		return 0
-	}
-
-	rmPathList, err := c.cleaner.Check(pathList)
-	if err != nil {
-		return 0
-	}
-
-	for _, p := range rmPathList {
-		err = os.RemoveAll(filepath.Join(c.dirPath, p))
-		if err != nil {
-			c.lg.Errorw("Fail to remove path", err, "path", p)
-		}
-	}
-
-	return uint64(len(rmPathList))
 }
