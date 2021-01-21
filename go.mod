@@ -4,7 +4,6 @@ go 1.15
 
 require (
 	github.com/disintegration/imaging v1.6.2
-	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/rs/cors v1.7.0
 	github.com/spf13/viper v1.7.1

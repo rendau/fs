@@ -35,7 +35,7 @@ func New(
 ) *St {
 	c := &St{
 		lg:            lg,
-		dirPath:       util.ToFsPath(dirPath),
+		dirPath:       dirPath,
 		imgMaxWidth:   imgMaxWidth,
 		imgMaxHeight:  imgMaxHeight,
 		wMarkOpacity:  wMarkOpacity,
