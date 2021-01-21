@@ -38,33 +38,49 @@ func Execute() {
 		log.Fatal(err)
 	}
 
-	if viper.GetString("clean_api_url") != "" {
-		app.cleaner = cleaner.New(app.lg, viper.GetString("clean_api_url"))
+	httpListen := viper.GetString("http_listen")
+	dirPath := viper.GetString("dir_path")
+	cleanApiUrl := viper.GetString("clean_api_url")
+	imgMaxWidth := viper.GetInt("img_max_width")
+	imgMaxHeight := viper.GetInt("img_max_height")
+	wmPath := viper.GetString("wm_path")
+	wmOpacity := viper.GetFloat64("wm_opacity")
+	wmDirPaths := viper.GetString("wm_dir_paths")
+
+	if cleanApiUrl != "" {
+		app.cleaner = cleaner.New(app.lg, cleanApiUrl)
 	} else {
 		app.cleaner = cleanerMock.New()
 	}
 
 	app.core = core.New(
 		app.lg,
-		viper.GetString("dir_path"),
-		viper.GetInt("img_max_width"),
-		viper.GetInt("img_max_height"),
-		viper.GetString("wm_path"),
-		viper.GetFloat64("wm_opacity"),
-		parseWMarkDirPaths(viper.GetString("wm_dir_paths")),
+		dirPath,
+		imgMaxWidth,
+		imgMaxHeight,
+		wmPath,
+		wmOpacity,
+		parseWMarkDirPaths(wmDirPaths),
 		app.cleaner,
 		false,
 	)
 
 	app.restApi = rest.New(
 		app.lg,
-		viper.GetString("http_listen"),
+		httpListen,
 		app.core,
 	)
 
 	app.lg.Infow(
 		"Starting",
-		"http_listen", viper.GetString("http_listen"),
+		"http_listen", httpListen,
+		"dir_path", dirPath,
+		"clean_api_url", cleanApiUrl,
+		"img_max_width", imgMaxWidth,
+		"img_max_height", imgMaxHeight,
+		"wm_path", wmPath,
+		"wm_opacity", wmOpacity,
+		"wm_dir_paths", wmDirPaths,
 	)
 
 	app.restApi.Start()
