@@ -304,12 +304,12 @@ func (c *St) cleanPathListRoutine(pathList []string) uint64 {
 	}
 
 	for _, p := range rmPathList {
-		c.lg.Infow("Want to remove", "f_path", p)
+		// c.lg.Infow("Want to remove", "f_path", p)
 
-		// err = os.RemoveAll(filepath.Join(c.dirPath, p))
-		// if err != nil {
-		// 	c.lg.Errorw("Fail to remove path", err, "path", p)
-		// }
+		err = os.RemoveAll(filepath.Join(c.dirPath, p))
+		if err != nil {
+			c.lg.Errorw("Fail to remove path", err, "path", p)
+		}
 	}
 
 	return uint64(len(rmPathList))
