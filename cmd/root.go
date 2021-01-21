@@ -47,8 +47,8 @@ func Execute() {
 	app.core = core.New(
 		app.lg,
 		viper.GetString("dir_path"),
-		viper.GetInt("img.max_width"),
-		viper.GetInt("img.max_height"),
+		viper.GetInt("img_max_width"),
+		viper.GetInt("img_max_height"),
 		viper.GetString("wm_path"),
 		viper.GetFloat64("wm_opacity"),
 		parseWMarkDirPaths(viper.GetString("wm_dir_paths")),
