@@ -61,8 +61,8 @@ func (c *St) imgHandle(fPath string, w io.Writer, pars *entities.ImgParsSt) erro
 
 	img, err := imaging.Open(fPath, imaging.AutoOrientation(true))
 	if err != nil {
-		c.lg.Errorw("Fail to open img", err)
-		return err
+		// c.lg.Errorw("Fail to open img", err)
+		return nil
 	}
 
 	imgBounds := img.Bounds().Max
