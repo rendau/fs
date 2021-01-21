@@ -102,8 +102,6 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 	reqFsPath := util.ToFsPath(reqPath)
 	absFsPath := filepath.Join(c.dirPath, reqFsPath)
 
-	c.lg.Infow("Get request", "reqPath", reqPath, "absFsPath", absFsPath)
-
 	name := ""
 	modTime := time.Now()
 	content := make([]byte, 0)
