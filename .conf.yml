@@ -8,3 +8,5 @@ wm_dir_paths: "dir_path1;dir_path2;"
 clean_api_url: "http-url" # will request with PUT method, and send ["fil1", "fil2", ...] json-data
 img_max_width: 1000 # in pixels, not required
 img_max_height: 1000 # in pixels, not required
+cache_count: 300
+cache_duration: 1h

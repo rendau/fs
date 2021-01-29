@@ -46,6 +46,8 @@ func Execute() {
 	wmPath := viper.GetString("wm_path")
 	wmOpacity := viper.GetFloat64("wm_opacity")
 	wmDirPaths := viper.GetString("wm_dir_paths")
+	cacheCount := viper.GetInt("cache_count")
+	cacheDuration := viper.GetDuration("cache_duration")
 
 	if cleanApiUrl != "" {
 		app.cleaner = cleaner.New(app.lg, cleanApiUrl)
@@ -62,8 +64,8 @@ func Execute() {
 		wmOpacity,
 		parseWMarkDirPaths(wmDirPaths),
 		app.cleaner,
-		200,
-		30*time.Minute,
+		cacheCount,
+		cacheDuration,
 		false,
 	)
 
