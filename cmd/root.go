@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"runtime"
 	"runtime/debug"
 	"strings"
 	"syscall"
@@ -92,11 +91,9 @@ func Execute() {
 		for {
 			time.Sleep(30 * time.Second)
 
-			app.lg.Infow("Start GC")
-
 			n := time.Now()
 
-			runtime.GC()
+			debug.FreeOSMemory()
 
 			app.lg.Infow("End GC", "dur", time.Now().Sub(n).String())
 		}
