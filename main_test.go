@@ -106,6 +106,8 @@ func TestMain(m *testing.M) {
 		0,
 		[]string{},
 		app.cleaner,
+		0,
+		time.Minute,
 		true,
 	)
 

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -99,6 +100,12 @@ func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, noCut 
 func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (string, time.Time, []byte, error) {
 	var err error
 
+	cKey := c.GetCacheKey(reqPath, imgPars, download)
+
+	if name, modTime, content := c.Cache.GetAndRefresh(cKey); content != nil {
+		return name, modTime, content, nil
+	}
+
 	reqFsPath := util.ToFsPath(reqPath)
 	absFsPath := filepath.Join(c.dirPath, reqFsPath)
 
@@ -176,7 +183,13 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 		}
 	}
 
+	c.Cache.Set(cKey, name, modTime, content)
+
 	return name, modTime, content, nil
+}
+
+func (c *St) GetCacheKey(reqPath string, imgPars *entities.ImgParsSt, download bool) string {
+	return reqPath + "?" + imgPars.String() + "&dl=" + strconv.FormatBool(download)
 }
 
 func (c *St) Clean(checkChunkSize int) {

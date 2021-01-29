@@ -2,6 +2,7 @@ package core
 
 import (
 	"sync"
+	"time"
 
 	"github.com/rendau/fs/internal/domain/util"
 	"github.com/rendau/fs/internal/interfaces"
@@ -20,6 +21,8 @@ type St struct {
 	wg     sync.WaitGroup
 	stop   bool
 	stopMu sync.RWMutex
+
+	Cache *Cache
 }
 
 func New(
@@ -31,6 +34,8 @@ func New(
 	wMarkOpacity float64,
 	wMarkDirPaths []string,
 	cleaner interfaces.Cleaner,
+	cacheCount int,
+	cacheTtl time.Duration,
 	testing bool,
 ) *St {
 	c := &St{
@@ -53,6 +58,8 @@ func New(
 	for i := range c.wMarkDirPaths {
 		c.wMarkDirPaths[i] = util.ToFsPath(c.wMarkDirPaths[i])
 	}
+
+	c.Cache = NewCache(c, cacheCount, cacheTtl)
 
 	return c
 }

@@ -62,6 +62,8 @@ func Execute() {
 		wmOpacity,
 		parseWMarkDirPaths(wmDirPaths),
 		app.cleaner,
+		200,
+		30*time.Minute,
 		false,
 	)
 
