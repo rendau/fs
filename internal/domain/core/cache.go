@@ -34,7 +34,7 @@ func NewCache(r *St, maxCount int, ttl time.Duration) *Cache {
 	if c.maxCount > 0 {
 		go func() {
 			for {
-				time.Sleep(30 * time.Second)
+				time.Sleep(time.Minute)
 
 				c.removeExpired()
 			}
