@@ -5,17 +5,18 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"runtime"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
 
-	cleanerMock "github.com/rendau/fs/internal/adapters/cleaner/mock"
-	"github.com/rendau/fs/internal/interfaces"
-
 	"github.com/rendau/fs/internal/adapters/cleaner/cleaner"
+	cleanerMock "github.com/rendau/fs/internal/adapters/cleaner/mock"
 	"github.com/rendau/fs/internal/adapters/httpapi/rest"
 	"github.com/rendau/fs/internal/adapters/logger/zap"
 	"github.com/rendau/fs/internal/domain/core"
+	"github.com/rendau/fs/internal/interfaces"
 	"github.com/spf13/viper"
 )
 
@@ -24,7 +25,7 @@ func Execute() {
 
 	loadConf()
 
-	debug := viper.GetBool("debug")
+	fDebug := viper.GetBool("debug")
 
 	app := struct {
 		lg      interfaces.Logger
@@ -33,7 +34,7 @@ func Execute() {
 		restApi *rest.St
 	}{}
 
-	app.lg, err = zap.New(viper.GetString("log_level"), debug, false)
+	app.lg, err = zap.New(viper.GetString("log_level"), fDebug, false)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -84,6 +85,22 @@ func Execute() {
 	)
 
 	app.restApi.Start()
+
+	debug.SetGCPercent(-1)
+
+	go func() {
+		for {
+			time.Sleep(30 * time.Second)
+
+			app.lg.Infow("Start GC")
+
+			n := time.Now()
+
+			runtime.GC()
+
+			app.lg.Infow("End GC", "dur", time.Now().Sub(n).String())
+		}
+	}()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
