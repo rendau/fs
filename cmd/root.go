@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -84,21 +85,13 @@ func Execute() {
 
 	app.restApi.Start()
 
-	// go func() {
-	// 	for {
-	// 		time.Sleep(30 * time.Second)
-	//
-	// 		n := time.Now()
-	//
-	// 		debug.FreeOSMemory()
-	//
-	// 		app.lg.Infow(
-	// 			"End GC",
-	// 			"dur", time.Now().Sub(n).String(),
-	// 			"num_goroutine", runtime.NumGoroutine(),
-	// 		)
-	// 	}
-	// }()
+	go func() {
+		for {
+			time.Sleep(2 * time.Minute)
+
+			debug.FreeOSMemory()
+		}
+	}()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
