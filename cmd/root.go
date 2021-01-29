@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"runtime"
 	"runtime/debug"
 	"strings"
 	"syscall"
@@ -85,8 +86,6 @@ func Execute() {
 
 	app.restApi.Start()
 
-	debug.SetGCPercent(-1)
-
 	go func() {
 		for {
 			time.Sleep(30 * time.Second)
@@ -95,7 +94,11 @@ func Execute() {
 
 			debug.FreeOSMemory()
 
-			app.lg.Infow("End GC", "dur", time.Now().Sub(n).String())
+			app.lg.Infow(
+				"End GC",
+				"dur", time.Now().Sub(n).String(),
+				"num_goroutine", runtime.NumGoroutine(),
+			)
 		}
 	}()
 
