@@ -121,6 +121,4 @@ func (c *Cache) removeExpired() {
 	for _, k := range expiredKeys {
 		delete(c.m, k)
 	}
-
-	c.r.lg.Infow("Removed expired", "current_size", len(c.m))
 }
