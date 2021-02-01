@@ -19,8 +19,8 @@ type cacheVSt struct {
 	st time.Time
 
 	name string
-	mt   time.Time
 	data []byte
+	mt   time.Time
 }
 
 func NewCache(r *St, maxCount int, ttl time.Duration) *Cache {

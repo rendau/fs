@@ -5,10 +5,10 @@ import (
 )
 
 type ImgParsSt struct {
+	WMark  bool
 	Method string
 	Width  int
 	Height int
-	WMark  bool
 }
 
 func (o *ImgParsSt) Reset() {
