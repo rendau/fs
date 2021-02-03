@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -88,14 +87,6 @@ func Execute() {
 	)
 
 	app.restApi.Start()
-
-	go func() {
-		for {
-			time.Sleep(2 * time.Minute)
-
-			debug.FreeOSMemory()
-		}
-	}()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
