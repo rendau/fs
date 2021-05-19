@@ -48,14 +48,19 @@ func (c *St) Check(pathList []string) ([]string, error) {
 	}
 	defer rep.Body.Close()
 
-	if rep.StatusCode < 200 || rep.StatusCode >= 300 {
-		c.lg.Errorw("Fail to send http-request, bad status code", nil, "status_code", rep.StatusCode)
-		return nil, errs.ServiceNA
-	}
-
 	repBytes, err := ioutil.ReadAll(rep.Body)
 	if err != nil {
 		c.lg.Errorw("Fail to read body", err)
+		return nil, errs.ServiceNA
+	}
+
+	if rep.StatusCode < 200 || rep.StatusCode >= 300 {
+		c.lg.Errorw(
+			"Fail to send http-request, bad status code",
+			nil,
+			"status_code", rep.StatusCode,
+			"body", string(repBytes),
+		)
 		return nil, errs.ServiceNA
 	}
 
