@@ -1,0 +1,113 @@
+consumes:
+- application/json
+definitions:
+  ErrRepSt:
+    properties:
+      error_code:
+        type: string
+        x-go-name: ErrorCode
+    type: object
+    x-go-package: github.com/rendau/fs/internal/adapters/httpapi/rest
+info:
+  description: |-
+    ### HTTP File server
+    This service handles file upload and download operations.
+  title: FS API.
+  version: 1.0.0
+paths:
+  /:
+    post:
+      operationId: hSave
+      parameters:
+      - in: formData
+        name: file
+        required: true
+        type: file
+        x-go-name: File
+      - description: Directory name on a server, file will be saved to
+        in: formData
+        name: dir
+        required: true
+        type: string
+        x-go-name: Dir
+      responses:
+        "200":
+          $ref: '#/responses/saveRep'
+        "400":
+          $ref: '#/responses/errRep'
+      summary: Upload and save file.
+      tags:
+      - main
+  /{path}:
+    get:
+      operationId: hGet
+      parameters:
+      - description: Value from `POST` API
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
+      - description: Width of image (in pixels) to resize *(optional)*
+        in: query
+        name: w
+        type: string
+        x-go-name: W
+      - description: Height of image (in pixels) to resize *(optional)*
+        in: query
+        name: h
+        type: string
+        x-go-name: H
+      - description: |-
+          Method of resizing image. Works only with `w` or `h`
+          Possible values:
+          <ul>
+          <li>
+          <strong>fit</strong> - image will fit to <code>w</code> and(or) <code>h</code>. Will not crop image, just resizes with aspect ratio
+          </li>
+          <li>
+          <strong>fill</strong> - image will fill <code>w</code> and(or) <code>h</code>. Might crop edges, resizes with aspect ratio
+          </li>
+          </ul>
+        in: query
+        name: m
+        type: string
+        x-go-name: M
+      - description: Name of file. File will be downloaded with this name (optional)
+        in: query
+        name: download
+        type: string
+        x-go-name: Download
+      produces:
+      - application/octet-stream
+      - image/jpeg
+      - image/png
+      responses:
+        "200":
+          $ref: '#/responses/getRep'
+        "404":
+          description: ""
+      summary: Get or download file.
+      tags:
+      - main
+produces:
+- application/json
+responses:
+  errRep:
+    description: ""
+    schema:
+      $ref: '#/definitions/ErrRepSt'
+  getRep:
+    description: ""
+  saveRep:
+    description: ""
+    schema:
+      properties:
+        path:
+          type: string
+          x-go-name: Path
+      type: object
+schemes:
+- http
+- https
+swagger: "2.0"
