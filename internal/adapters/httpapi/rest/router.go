@@ -26,8 +26,10 @@ import (
 func (a *St) router() http.Handler {
 	r := mux.NewRouter()
 
-	// doc
-	r.Handle("/doc", http.RedirectHandler("/doc/", http.StatusMovedPermanently))
+	r.HandleFunc("/doc", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Location", "doc/")
+		w.WriteHeader(http.StatusMovedPermanently)
+	})
 	r.PathPrefix("/doc/").Handler(http.StripPrefix("/doc/", http.FileServer(http.Dir("./doc/"))))
 
 	r.HandleFunc("/", a.hSave).Methods("POST")
