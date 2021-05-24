@@ -25,6 +25,8 @@ func (a *St) middleware(h http.Handler) http.Handler {
 		MaxAge:           604800,
 	}).Handler(h)
 
+	h = a.mwLog(h)
+
 	h = a.mwRecovery(h)
 
 	return h
@@ -40,5 +42,13 @@ func (a *St) mwRecovery(h http.Handler) http.Handler {
 			}
 		}()
 		h.ServeHTTP(w, r)
+	})
+}
+
+func (a *St) mwLog(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h.ServeHTTP(w, r)
+
+		a.lg.Infow(r.Method + " " + r.URL.EscapedPath())
 	})
 }
