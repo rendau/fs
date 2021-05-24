@@ -18,6 +18,6 @@ RUN apk add --no-cache --upgrade ca-certificates tzdata
 
 WORKDIR /app
 
-COPY --from=builder /app/cmd/build/* ./
+COPY --from=builder /app/cmd/build/. ./
 
 CMD ["./svc"]
