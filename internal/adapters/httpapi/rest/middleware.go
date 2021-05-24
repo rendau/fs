@@ -25,6 +25,8 @@ func (a *St) middleware(h http.Handler) http.Handler {
 		MaxAge:           604800,
 	}).Handler(h)
 
+	h = a.mwRecovery(h)
+
 	return h
 }
 
