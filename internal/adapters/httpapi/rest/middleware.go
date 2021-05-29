@@ -7,6 +7,8 @@ import (
 )
 
 func (a *St) middleware(h http.Handler) http.Handler {
+	h = a.mwNoCache(h)
+
 	h = cors.New(cors.Options{
 		AllowOriginFunc: func(origin string) bool { return true },
 		AllowedMethods: []string{
