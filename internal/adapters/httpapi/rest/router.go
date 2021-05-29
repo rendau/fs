@@ -30,7 +30,7 @@ func (a *St) router() http.Handler {
 		w.Header().Set("Location", "doc/")
 		w.WriteHeader(http.StatusMovedPermanently)
 	})
-	r.PathPrefix("/doc/").Handler(http.StripPrefix("/doc/", http.FileServer(http.Dir("./doc/"))))
+	r.PathPrefix("/doc/").Handler(a.mwNoCache(http.StripPrefix("/doc/", http.FileServer(http.Dir("./doc/")))))
 
 	r.HandleFunc("/", a.hSave).Methods("POST")
 	r.HandleFunc("/clean", a.hClean).Methods("GET")
