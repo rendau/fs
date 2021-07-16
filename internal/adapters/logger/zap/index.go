@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 const callerSkip = 1
@@ -28,6 +29,8 @@ func New(level string, debug, test bool) (*St, error) {
 		}
 	default:
 		cfg := zap.NewProductionConfig()
+
+		cfg.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
 
 		switch level {
 		case "error":
