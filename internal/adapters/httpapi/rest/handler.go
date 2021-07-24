@@ -137,7 +137,11 @@ func (a *St) hGet(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch cErr := err.(type) {
 		case errs.Err:
-			a.uRespondJSON(w, ErrRepSt{ErrorCode: cErr.Error()})
+			if cErr == errs.NotFound {
+				http.NotFound(w, r)
+			} else {
+				a.uRespondJSON(w, ErrRepSt{ErrorCode: cErr.Error()})
+			}
 		default:
 			a.uRespondJSON(w, ErrRepSt{ErrorCode: errs.ServiceNA.Error()})
 		}
