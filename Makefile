@@ -6,6 +6,9 @@ BUILD_PATH = cmd/build
 doc_build:
 	swagger generate spec -o ./doc/doc.yaml
 
+run:
+	go run main.go
+
 build:
 	mkdir -p $(BUILD_PATH)
 	cp .conf.yml $(BUILD_PATH)/
