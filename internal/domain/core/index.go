@@ -15,7 +15,6 @@ type St struct {
 	imgMaxHeight  int
 	wMarkOpacity  float64
 	wMarkDirPaths []string
-	cleaner       interfaces.Cleaner
 	testing       bool
 
 	wg     sync.WaitGroup
@@ -33,7 +32,6 @@ func New(
 	wMarkPath string,
 	wMarkOpacity float64,
 	wMarkDirPaths []string,
-	cleaner interfaces.Cleaner,
 	cacheCount int,
 	cacheTtl time.Duration,
 	testing bool,
@@ -45,7 +43,6 @@ func New(
 		imgMaxHeight:  imgMaxHeight,
 		wMarkOpacity:  wMarkOpacity,
 		wMarkDirPaths: wMarkDirPaths,
-		cleaner:       cleaner,
 		testing:       testing,
 	}
 
@@ -66,9 +63,7 @@ func New(
 
 func (c *St) StopAndWaitJobs() {
 	c.stopMu.Lock()
-
 	c.stop = true
-
 	c.stopMu.Unlock()
 
 	c.wg.Wait()

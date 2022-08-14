@@ -1,13 +1,11 @@
 package errs
 
-type Err string
-
-func (e Err) Error() string {
-	return string(e)
-}
+import (
+	"github.com/rendau/dop/dopErrs"
+)
 
 const (
-	ServiceNA  = Err("server_not_available")
-	NotFound   = Err("not_found")
-	BadDirName = Err("bad_dir_name")
+	BadFormData = dopErrs.Err("bad_form_data")
+	BadFile     = dopErrs.Err("bad_file")
+	BadDirName  = dopErrs.Err("bad_dir_name")
 )
