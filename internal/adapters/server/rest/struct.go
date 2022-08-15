@@ -5,10 +5,10 @@ import (
 )
 
 type SaveReqSt struct {
-	Dir        string                `form:"dir" binding:"required"`
-	File       *multipart.FileHeader `form:"file" binding:"required"`
-	NoCut      bool                  `form:"no_cut"`
-	ExtractZip bool                  `form:"extract_zip"`
+	Dir        string                `json:"dir" form:"dir" binding:"required"`
+	File       *multipart.FileHeader `json:"file" form:"file" binding:"required"`
+	NoCut      bool                  `json:"no_cut" form:"no_cut"`
+	ExtractZip bool                  `json:"extract_zip" form:"extract_zip"`
 }
 
 type SaveRepSt struct {

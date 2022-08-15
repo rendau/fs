@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/disintegration/imaging"
-	cleanerMock "github.com/rendau/fs/internal/adapters/cleaner/mock"
 	"github.com/rendau/fs/internal/adapters/logger/zap"
 	"github.com/rendau/fs/internal/cns"
 	"github.com/rendau/fs/internal/domain/core"
@@ -38,9 +37,8 @@ type fsItemSt struct {
 
 var (
 	app = struct {
-		lg      *zap.St
-		cleaner *cleanerMock.St
-		core    *core.St
+		lg   *zap.St
+		core *core.St
 	}{}
 )
 
@@ -95,8 +93,6 @@ func TestMain(m *testing.M) {
 	}
 	defer app.lg.Sync()
 
-	app.cleaner = cleanerMock.New()
-
 	app.core = core.New(
 		app.lg,
 		testDirPath,
@@ -105,7 +101,6 @@ func TestMain(m *testing.M) {
 		"",
 		0,
 		[]string{},
-		app.cleaner,
 		0,
 		time.Minute,
 		true,
@@ -318,111 +313,111 @@ func TestCreateZip(t *testing.T) {
 	require.Equal(t, "some html content", string(fContent))
 }
 
-func TestClean(t *testing.T) {
-	cleanTestDir()
-
-	cleanTime := time.Now().AddDate(0, 0, -cns.CleanFileNotCheckPeriodDays-1)
-
-	dirStructure := []fsItemSt{
-		{p: "dir1", c: "", mt: cleanTime},
-		{p: "dir2/file1.txt", c: "file1 content", mt: cleanTime},
-		{p: "dir2/dir3/file2.txt", c: "file2 content", mt: cleanTime},
-		{p: "file3.txt", c: "file3 content", mt: cleanTime},
-		{p: "dir5/" + cns.ZipDirNamePrefix + "q/a/js.js", c: "content", mt: cleanTime},
-		{p: "dir5/" + cns.ZipDirNamePrefix + "q/index.html", c: "content", mt: cleanTime},
-		{p: "dir5/" + cns.ZipDirNamePrefix + "q/css.css", c: "content", mt: cleanTime},
-		{p: "dir6/q" + cns.ZipDirNamePrefix + "/index.html", c: "content", mt: cleanTime},
-	}
-
-	err := makeDirStructure(testDirPath, dirStructure)
-	require.Nil(t, err)
-
-	compareDirStructure(t, testDirPath, dirStructure)
-
-	checkedFiles := make([]string, 0)
-
-	app.cleaner.SetHandler(func(pathList []string) []string {
-		checkedFiles = append(checkedFiles, pathList...)
-		return []string{}
-	})
-
-	app.core.Clean(0)
-
-	dirStructure = dirStructure[1:]
-
-	compareStringSlices(t, []string{
-		"dir2/file1.txt",
-		"dir2/dir3/file2.txt",
-		"file3.txt",
-		"dir5/" + cns.ZipDirNamePrefix + "q/",
-		"dir6/q" + cns.ZipDirNamePrefix + "/index.html",
-	}, checkedFiles)
-
-	compareDirStructure(t, testDirPath, dirStructure)
-
-	app.cleaner.SetHandler(func(pathList []string) []string {
-		return []string{
-			dirStructure[1].p,
-		}
-	})
-
-	app.core.Clean(0)
-
-	dirStructure = append(dirStructure[:1], dirStructure[2:]...)
-
-	compareDirStructure(t, testDirPath, dirStructure)
-
-	checkedFiles = make([]string, 0)
-
-	app.cleaner.SetHandler(func(pathList []string) []string {
-		checkedFiles = append(checkedFiles, pathList...)
-		return pathList
-	})
-
-	err = os.Chtimes(filepath.Join(testDirPath, "file3.txt"), time.Now(), time.Now())
-	require.Nil(t, err)
-
-	err = os.Chtimes(filepath.Join(testDirPath, "dir5", cns.ZipDirNamePrefix+"q"), time.Now(), time.Now())
-	require.Nil(t, err)
-
-	app.core.Clean(0)
-
-	dirStructure = []fsItemSt{
-		{p: "file3.txt", c: "file3 content", mt: cleanTime},
-		{p: "dir5/" + cns.ZipDirNamePrefix + "q/a/js.js", c: "content", mt: cleanTime},
-		{p: "dir5/" + cns.ZipDirNamePrefix + "q/index.html", c: "content", mt: cleanTime},
-		{p: "dir5/" + cns.ZipDirNamePrefix + "q/css.css", c: "content", mt: cleanTime},
-	}
-
-	app.lg.Info(checkedFiles)
-
-	compareStringSlices(t, []string{
-		"dir2/file1.txt",
-		"dir6/q" + cns.ZipDirNamePrefix + "/index.html",
-	}, checkedFiles)
-
-	compareDirStructure(t, testDirPath, dirStructure)
-
-	cleanTestDir()
-
-	err = makeDirStructure(testDirPath, []fsItemSt{
-		{p: "dir1", c: "", mt: cleanTime},
-		{p: "dir2", c: "", mt: cleanTime},
-		{p: "dir2/dir3", c: "", mt: cleanTime},
-		{p: "dir2/dir3/dir4", c: "", mt: cleanTime},
-		{p: "dir2/dir5/dir6", c: "", mt: cleanTime},
-		{p: "dir2/dir5/file1.txt", c: "asd", mt: cleanTime},
-	})
-	require.Nil(t, err)
-
-	app.cleaner.SetHandler(func(pathList []string) []string { return []string{} })
-
-	app.core.Clean(0)
-
-	compareDirStructure(t, testDirPath, []fsItemSt{
-		{p: "dir2/dir5/file1.txt", c: "asd"},
-	})
-}
+// func TestClean(t *testing.T) {
+// 	cleanTestDir()
+//
+// 	cleanTime := time.Now().AddDate(0, 0, -cns.CleanFileNotCheckPeriodDays-1)
+//
+// 	dirStructure := []fsItemSt{
+// 		{p: "dir1", c: "", mt: cleanTime},
+// 		{p: "dir2/file1.txt", c: "file1 content", mt: cleanTime},
+// 		{p: "dir2/dir3/file2.txt", c: "file2 content", mt: cleanTime},
+// 		{p: "file3.txt", c: "file3 content", mt: cleanTime},
+// 		{p: "dir5/" + cns.ZipDirNamePrefix + "q/a/js.js", c: "content", mt: cleanTime},
+// 		{p: "dir5/" + cns.ZipDirNamePrefix + "q/index.html", c: "content", mt: cleanTime},
+// 		{p: "dir5/" + cns.ZipDirNamePrefix + "q/css.css", c: "content", mt: cleanTime},
+// 		{p: "dir6/q" + cns.ZipDirNamePrefix + "/index.html", c: "content", mt: cleanTime},
+// 	}
+//
+// 	err := makeDirStructure(testDirPath, dirStructure)
+// 	require.Nil(t, err)
+//
+// 	compareDirStructure(t, testDirPath, dirStructure)
+//
+// 	checkedFiles := make([]string, 0)
+//
+// 	app.cleaner.SetHandler(func(pathList []string) []string {
+// 		checkedFiles = append(checkedFiles, pathList...)
+// 		return []string{}
+// 	})
+//
+// 	app.core.Clean(0)
+//
+// 	dirStructure = dirStructure[1:]
+//
+// 	compareStringSlices(t, []string{
+// 		"dir2/file1.txt",
+// 		"dir2/dir3/file2.txt",
+// 		"file3.txt",
+// 		"dir5/" + cns.ZipDirNamePrefix + "q/",
+// 		"dir6/q" + cns.ZipDirNamePrefix + "/index.html",
+// 	}, checkedFiles)
+//
+// 	compareDirStructure(t, testDirPath, dirStructure)
+//
+// 	app.cleaner.SetHandler(func(pathList []string) []string {
+// 		return []string{
+// 			dirStructure[1].p,
+// 		}
+// 	})
+//
+// 	app.core.Clean(0)
+//
+// 	dirStructure = append(dirStructure[:1], dirStructure[2:]...)
+//
+// 	compareDirStructure(t, testDirPath, dirStructure)
+//
+// 	checkedFiles = make([]string, 0)
+//
+// 	app.cleaner.SetHandler(func(pathList []string) []string {
+// 		checkedFiles = append(checkedFiles, pathList...)
+// 		return pathList
+// 	})
+//
+// 	err = os.Chtimes(filepath.Join(testDirPath, "file3.txt"), time.Now(), time.Now())
+// 	require.Nil(t, err)
+//
+// 	err = os.Chtimes(filepath.Join(testDirPath, "dir5", cns.ZipDirNamePrefix+"q"), time.Now(), time.Now())
+// 	require.Nil(t, err)
+//
+// 	app.core.Clean(0)
+//
+// 	dirStructure = []fsItemSt{
+// 		{p: "file3.txt", c: "file3 content", mt: cleanTime},
+// 		{p: "dir5/" + cns.ZipDirNamePrefix + "q/a/js.js", c: "content", mt: cleanTime},
+// 		{p: "dir5/" + cns.ZipDirNamePrefix + "q/index.html", c: "content", mt: cleanTime},
+// 		{p: "dir5/" + cns.ZipDirNamePrefix + "q/css.css", c: "content", mt: cleanTime},
+// 	}
+//
+// 	app.lg.Info(checkedFiles)
+//
+// 	compareStringSlices(t, []string{
+// 		"dir2/file1.txt",
+// 		"dir6/q" + cns.ZipDirNamePrefix + "/index.html",
+// 	}, checkedFiles)
+//
+// 	compareDirStructure(t, testDirPath, dirStructure)
+//
+// 	cleanTestDir()
+//
+// 	err = makeDirStructure(testDirPath, []fsItemSt{
+// 		{p: "dir1", c: "", mt: cleanTime},
+// 		{p: "dir2", c: "", mt: cleanTime},
+// 		{p: "dir2/dir3", c: "", mt: cleanTime},
+// 		{p: "dir2/dir3/dir4", c: "", mt: cleanTime},
+// 		{p: "dir2/dir5/dir6", c: "", mt: cleanTime},
+// 		{p: "dir2/dir5/file1.txt", c: "asd", mt: cleanTime},
+// 	})
+// 	require.Nil(t, err)
+//
+// 	app.cleaner.SetHandler(func(pathList []string) []string { return []string{} })
+//
+// 	app.core.Clean(0)
+//
+// 	compareDirStructure(t, testDirPath, []fsItemSt{
+// 		{p: "dir2/dir5/file1.txt", c: "asd"},
+// 	})
+// }
 
 func createZipArchive(items []fsItemSt) (*bytes.Buffer, error) {
 	result := new(bytes.Buffer)

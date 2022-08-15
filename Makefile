@@ -3,16 +3,14 @@
 BINARY_NAME = svc
 BUILD_PATH = cmd/build
 
-doc_build:
-	swagger generate spec -o ./doc/doc.yaml
+fmt_swdoc:
+	swag fmt
 
-run:
-	go run main.go
+swdoc:
+	swag init --parseDependency --parseDepth 3
 
 build:
 	mkdir -p $(BUILD_PATH)
-	cp .conf.yml $(BUILD_PATH)/
-	cp -R doc $(BUILD_PATH)/
 	CGO_ENABLED=0 go build -o $(BUILD_PATH)/$(BINARY_NAME) main.go
 
 clean:

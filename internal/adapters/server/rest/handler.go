@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/http"
 	"path"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	dopHttps "github.com/rendau/dop/adapters/server/https"
@@ -17,17 +18,16 @@ import (
 // @Tags     main
 // @Summary  Upload and save file.
 // @Accept   mpfd
-// @Param    body  body  SaveReqSt  false  "body"
-// @Success  200 {object} SaveRepSt
-// @Failure  400  {object}  dopTypes.ErrRep
+// @Param    body  body      SaveReqSt  false  "body"
+// @Success  200   {object}  SaveRepSt
+// @Failure  400   {object}  dopTypes.ErrRep
 func (a *St) hSave(c *gin.Context) {
 	var err error
 
 	reqObj := &SaveReqSt{}
 	err = c.ShouldBind(reqObj)
 	if err != nil {
-		dopHttps.Error(c, dopErrs.ErrWithDesc{Err: errs.BadFormData})
-
+		dopHttps.Error(c, dopErrs.ErrWithDesc{Err: errs.BadFormData, Desc: err.Error()})
 		return
 	}
 	if reqObj.File == nil {
@@ -53,66 +53,52 @@ func (a *St) hSave(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SaveRepSt{
-		Path: result,
-	})
+	c.JSON(http.StatusOK, SaveRepSt{Path: result})
 }
-
-// swagger:route GET /{path} main hGet
-// Get or download file.
-// Produces:
-// - application/octet-stream
-// - image/jpeg
-// - image/png
-// Responses:
-//   200: getRep
-//   404:
 
 // @Router   /:path [get]
 // @Tags     main
 // @Summary  Get or download file.
-// @Param    path     path   string                true   "path"
+// @Param    path   path   string       true   "path"
 // @Param    query  query  GetParamsSt  false  "query"
-// @Success  200  octet-stream
-// @Failure  400  {object}  dopTypes.ErrRep
+// @Produce  octet-stream
+// @Success  200
+// @Failure  400    {object}  dopTypes.ErrRep
 func (a *St) hGet(c *gin.Context) {
 	var err error
 
 	urlPath := c.Request.URL.Path
+
+	if strings.HasPrefix(urlPath, "/static") {
+		urlPath = urlPath[7:]
+	}
 
 	pars := &GetParamsSt{}
 	if !dopHttps.BindQuery(c, pars) {
 		return
 	}
 
-	imgPars := &entities.ImgParsSt{
+	fName, fModTime, fData, err := a.core.Get(urlPath, &entities.ImgParsSt{
 		Method: pars.M,
 		Width:  pars.W,
 		Height: pars.H,
-	}
-
-	fName, fModTime, fData, err := a.core.Get(urlPath, imgPars, pars.Download != "")
+	}, pars.Download != "")
 	if err != nil {
-		switch cErr := err.(type) {
-		case errs.Err:
-			if cErr == errs.NotFound {
-				http.NotFound(w, r)
-			} else {
-				a.uRespondJSON(w, ErrRepSt{ErrorCode: cErr.Error()})
-			}
-		default:
-			a.uRespondJSON(w, ErrRepSt{ErrorCode: errs.ServiceNA.Error()})
+		if err == dopErrs.ObjectNotFound {
+			c.Status(http.StatusNotFound)
+		} else {
+			dopHttps.Error(c, err)
 		}
 		return
 	}
 
-	if download != "" {
-		download += path.Ext(fName)
-		w.Header().Set("Content-Type", `application/octet-stream`)
-		w.Header().Set("Content-Disposition", `attachment; filename="`+download+`"`)
+	if pars.Download != "" {
+		pars.Download += path.Ext(fName)
+		c.Header("Content-Type", `application/octet-stream`)
+		c.Header("Content-Disposition", `attachment; filename="`+pars.Download+`"`)
 	}
 
-	http.ServeContent(w, r, fName, fModTime, bytes.NewReader(fData))
+	http.ServeContent(c.Writer, c.Request, fName, fModTime, bytes.NewReader(fData))
 }
 
 func (a *St) hClean(c *gin.Context) {

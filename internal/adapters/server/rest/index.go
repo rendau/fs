@@ -42,9 +42,9 @@ func GetHandler(lg logger.Lite, core *core.St, withCors bool) http.Handler {
 	r.GET("/healthcheck", func(c *gin.Context) { c.Status(http.StatusOK) })
 
 	// main
-	r.POST("/", s.hSave)
+	r.POST("/static/", s.hSave)
+	r.GET("/static/*any", s.hGet)
 	r.GET("/clean", s.hClean)
-	r.GET("/*any", s.hGet)
 
 	return r
 }

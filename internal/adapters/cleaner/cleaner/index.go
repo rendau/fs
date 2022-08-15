@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rendau/fs/internal/domain/errs"
+	"github.com/rendau/dop/dopErrs"
 	"github.com/rendau/fs/internal/interfaces"
 )
 
@@ -32,26 +32,26 @@ func (c *St) Check(pathList []string) ([]string, error) {
 	reqBytes, err := json.Marshal(pathList)
 	if err != nil {
 		c.lg.Errorw("Fail to marshal json", err)
-		return nil, errs.ServiceNA
+		return nil, dopErrs.ServiceNA
 	}
 
 	req, err := http.NewRequest("PUT", c.checkUrl, bytes.NewBuffer(reqBytes))
 	if err != nil {
 		c.lg.Errorw("Fail to create http-request", err)
-		return nil, errs.ServiceNA
+		return nil, dopErrs.ServiceNA
 	}
 
 	rep, err := c.httpClient.Do(req)
 	if err != nil {
 		c.lg.Errorw("Fail to send http-request", err)
-		return nil, errs.ServiceNA
+		return nil, dopErrs.ServiceNA
 	}
 	defer rep.Body.Close()
 
 	repBytes, err := ioutil.ReadAll(rep.Body)
 	if err != nil {
 		c.lg.Errorw("Fail to read body", err)
-		return nil, errs.ServiceNA
+		return nil, dopErrs.ServiceNA
 	}
 
 	if rep.StatusCode < 200 || rep.StatusCode >= 300 {
@@ -61,14 +61,14 @@ func (c *St) Check(pathList []string) ([]string, error) {
 			"status_code", rep.StatusCode,
 			"body", string(repBytes),
 		)
-		return nil, errs.ServiceNA
+		return nil, dopErrs.ServiceNA
 	}
 
 	result := make([]string, 0)
 
 	if err = json.Unmarshal(repBytes, &result); err != nil {
 		c.lg.Errorw("Fail to parse json", err, "body", string(repBytes))
-		return nil, errs.ServiceNA
+		return nil, dopErrs.ServiceNA
 	}
 
 	return result, nil

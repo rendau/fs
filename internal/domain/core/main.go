@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rendau/dop/dopErrs"
 	"github.com/rendau/fs/internal/cns"
 	"github.com/rendau/fs/internal/domain/entities"
 	"github.com/rendau/fs/internal/domain/errs"
@@ -113,7 +114,15 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 	modTime := time.Now()
 	content := make([]byte, 0)
 
-	if util.FsPathIsDir(absFsPath) {
+	fInfo, err := os.Stat(absFsPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			c.lg.Errorw("Fail to get stat of file", err, "f_path", absFsPath)
+		}
+		return "", modTime, nil, dopErrs.ObjectNotFound
+	}
+
+	if fInfo.IsDir() {
 		dirName := filepath.Base(absFsPath)
 
 		if strings.HasPrefix(dirName, cns.ZipDirNamePrefix) {
@@ -129,24 +138,13 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 				name = "index.html"
 				imgPars.Reset()
 			} else {
-				return "", modTime, nil, errs.NotFound
+				return "", modTime, nil, dopErrs.ObjectNotFound
 			}
 		} else {
-			return "", modTime, nil, errs.NotFound
+			return "", modTime, nil, dopErrs.ObjectNotFound
 		}
 	} else {
 		_, name = filepath.Split(absFsPath)
-	}
-
-	fInfo, err := os.Stat(absFsPath)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			c.lg.Errorw("Fail to get stat of file", err, "f_path", absFsPath)
-		}
-		return "", modTime, nil, errs.NotFound
-	}
-	if fInfo.IsDir() { // if "index.html" is dir
-		return "", modTime, nil, errs.NotFound
 	}
 
 	if !strings.Contains("/"+reqFsPath, "/"+cns.ZipDirNamePrefix) {
@@ -303,29 +301,31 @@ func (c *St) cleanRoutine(checkChunkSize int) {
 }
 
 func (c *St) cleanPathListRoutine(pathList []string) uint64 {
-	if len(pathList) == 0 {
-		return 0
-	}
+	// if len(pathList) == 0 {
+	// 	return 0
+	// }
+	//
+	// if c.IsStopped() {
+	// 	return 0
+	// }
+	//
+	// rmPathList, err := c.cleaner.Check(pathList)
+	// if err != nil {
+	// 	return 0
+	// }
+	//
+	// for _, p := range rmPathList {
+	// 	// c.lg.Infow("Want to remove", "f_path", p)
+	//
+	// 	err = os.RemoveAll(filepath.Join(c.dirPath, p))
+	// 	if err != nil {
+	// 		c.lg.Errorw("Fail to remove path", err, "path", p)
+	// 	}
+	// }
+	//
+	// return uint64(len(rmPathList))
 
-	if c.IsStopped() {
-		return 0
-	}
-
-	rmPathList, err := c.cleaner.Check(pathList)
-	if err != nil {
-		return 0
-	}
-
-	for _, p := range rmPathList {
-		// c.lg.Infow("Want to remove", "f_path", p)
-
-		err = os.RemoveAll(filepath.Join(c.dirPath, p))
-		if err != nil {
-			c.lg.Errorw("Fail to remove path", err, "path", p)
-		}
-	}
-
-	return uint64(len(rmPathList))
+	return 0
 }
 
 func (c *St) cleanRemoveEmptyDirs(rootDirPath string) error {
