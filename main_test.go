@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/disintegration/imaging"
+	cleanerMock "github.com/rendau/fs/internal/adapters/cleaner/mock"
 	"github.com/rendau/fs/internal/adapters/logger/zap"
 	"github.com/rendau/fs/internal/cns"
 	"github.com/rendau/fs/internal/domain/core"
@@ -37,8 +38,9 @@ type fsItemSt struct {
 
 var (
 	app = struct {
-		lg   *zap.St
-		core *core.St
+		lg      *zap.St
+		cleaner *cleanerMock.St
+		core    *core.St
 	}{}
 )
 
@@ -93,8 +95,11 @@ func TestMain(m *testing.M) {
 	}
 	defer app.lg.Sync()
 
+	app.cleaner = cleanerMock.New()
+
 	app.core = core.New(
 		app.lg,
+		app.cleaner,
 		testDirPath,
 		imgMaxWidth,
 		imgMaxHeight,

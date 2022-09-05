@@ -4,12 +4,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rendau/dop/adapters/logger"
+	"github.com/rendau/fs/internal/adapters/cleaner"
 	"github.com/rendau/fs/internal/domain/util"
-	"github.com/rendau/fs/internal/interfaces"
 )
 
 type St struct {
-	lg            interfaces.Logger
+	lg            logger.Lite
+	cleaner       cleaner.Cleaner
 	dirPath       string
 	imgMaxWidth   int
 	imgMaxHeight  int
@@ -25,7 +27,8 @@ type St struct {
 }
 
 func New(
-	lg interfaces.Logger,
+	lg logger.Lite,
+	cleaner cleaner.Cleaner,
 	dirPath string,
 	imgMaxWidth int,
 	imgMaxHeight int,
@@ -38,6 +41,7 @@ func New(
 ) *St {
 	c := &St{
 		lg:            lg,
+		cleaner:       cleaner,
 		dirPath:       dirPath,
 		imgMaxWidth:   imgMaxWidth,
 		imgMaxHeight:  imgMaxHeight,

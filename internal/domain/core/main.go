@@ -122,6 +122,10 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 		return "", modTime, nil, dopErrs.ObjectNotFound
 	}
 
+	if !download {
+		modTime = fInfo.ModTime()
+	}
+
 	if fInfo.IsDir() {
 		dirName := filepath.Base(absFsPath)
 
@@ -147,12 +151,10 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 		_, name = filepath.Split(absFsPath)
 	}
 
-	if !strings.Contains("/"+reqFsPath, "/"+cns.ZipDirNamePrefix) {
-		for _, p := range c.wMarkDirPaths {
-			if strings.HasPrefix(reqFsPath, p) {
-				imgPars.WMark = true
-				break
-			}
+	for _, p := range c.wMarkDirPaths {
+		if strings.HasPrefix(reqFsPath, p) {
+			imgPars.WMark = true
+			break
 		}
 	}
 
@@ -174,10 +176,6 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 		if err != nil {
 			c.lg.Errorw("Fail to read file", err, "f_path", absFsPath)
 			return "", modTime, nil, err
-		}
-
-		if !download {
-			modTime = fInfo.ModTime()
 		}
 	}
 
@@ -301,31 +299,29 @@ func (c *St) cleanRoutine(checkChunkSize int) {
 }
 
 func (c *St) cleanPathListRoutine(pathList []string) uint64 {
-	// if len(pathList) == 0 {
-	// 	return 0
-	// }
-	//
-	// if c.IsStopped() {
-	// 	return 0
-	// }
-	//
-	// rmPathList, err := c.cleaner.Check(pathList)
-	// if err != nil {
-	// 	return 0
-	// }
-	//
-	// for _, p := range rmPathList {
-	// 	// c.lg.Infow("Want to remove", "f_path", p)
-	//
-	// 	err = os.RemoveAll(filepath.Join(c.dirPath, p))
-	// 	if err != nil {
-	// 		c.lg.Errorw("Fail to remove path", err, "path", p)
-	// 	}
-	// }
-	//
-	// return uint64(len(rmPathList))
+	if len(pathList) == 0 {
+		return 0
+	}
 
-	return 0
+	if c.IsStopped() {
+		return 0
+	}
+
+	rmPathList, err := c.cleaner.Check(pathList)
+	if err != nil {
+		return 0
+	}
+
+	for _, p := range rmPathList {
+		// c.lg.Infow("Want to remove", "f_path", p)
+
+		err = os.RemoveAll(filepath.Join(c.dirPath, p))
+		if err != nil {
+			c.lg.Errorw("Fail to remove path", err, "path", p)
+		}
+	}
+
+	return uint64(len(rmPathList))
 }
 
 func (c *St) cleanRemoveEmptyDirs(rootDirPath string) error {
