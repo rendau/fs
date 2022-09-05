@@ -12,7 +12,7 @@ jobs:
     env:
       OWNER: rendau
       IMAGE: fs
-      IMAGE_TAG: 1.0
+      IMAGE_TAG: 1
     steps:
       - uses: actions/checkout@v2
 
