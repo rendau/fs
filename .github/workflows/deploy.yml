@@ -31,4 +31,3 @@ jobs:
       - run: docker build -t ghcr.io/$OWNER/$IMAGE:$IMAGE_TAG .
 
       - run: docker push ghcr.io/$OWNER/$IMAGE:$IMAGE_TAG
-w
