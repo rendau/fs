@@ -28,7 +28,7 @@ jobs:
 
       - run: make
 
-      - run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $ --password-stdin
+      - run: echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u $ --password-stdin
 
       - run: docker build -t ghcr.io/$OWNER/$IMAGE:$IMAGE_TAG .
 
