@@ -55,6 +55,8 @@ func (c *St) imgHandle(fPath string, w io.Writer, pars *entities.ImgParsSt) erro
 	pM := pars.Method
 	pW := pars.Width
 	pH := pars.Height
+	pBlur := pars.Blur
+	pGrayscale := pars.Grayscale
 	pWMark := pars.WMark
 
 	hasChanges := false
@@ -95,6 +97,14 @@ func (c *St) imgHandle(fPath string, w io.Writer, pars *entities.ImgParsSt) erro
 		}
 
 		hasChanges = true
+	}
+
+	if pBlur != 0 {
+		img = imaging.Blur(img, pBlur)
+	}
+
+	if pGrayscale {
+		img = imaging.Grayscale(img)
 	}
 
 	if pWMark && wMark != nil {

@@ -16,8 +16,10 @@ type SaveRepSt struct {
 }
 
 type GetParamsSt struct {
-	W        int    `json:"w" form:"w"`
-	H        int    `json:"h" form:"h"`
-	M        string `json:"m" form:"m"`
-	Download string `json:"download" form:"download"`
+	W         int     `json:"w" form:"w"`
+	H         int     `json:"h" form:"h"`
+	M         string  `json:"m" form:"m"`
+	Blur      float64 `json:"blur" form:"blur"`
+	Grayscale bool    `json:"grayscale" form:"grayscale"`
+	Download  string  `json:"download" form:"download"`
 }

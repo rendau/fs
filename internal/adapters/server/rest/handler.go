@@ -79,9 +79,11 @@ func (a *St) hGet(c *gin.Context) {
 	}
 
 	fName, fModTime, fData, err := a.core.Get(urlPath, &entities.ImgParsSt{
-		Method: pars.M,
-		Width:  pars.W,
-		Height: pars.H,
+		Method:    pars.M,
+		Width:     pars.W,
+		Height:    pars.H,
+		Blur:      pars.Blur,
+		Grayscale: pars.Grayscale,
 	}, pars.Download != "")
 	if err != nil {
 		if err == dopErrs.ObjectNotFound {
