@@ -38,14 +38,14 @@ func Execute() {
 	if conf.CleanApiUrl != "" {
 		app.cleaner = cleanerCleaner.New(
 			app.lg,
-			httpclient.New(app.lg, httpc.OptionsSt{
+			httpclient.New(app.lg, &httpc.OptionsSt{
 				Client: &http.Client{
 					Timeout:   time.Minute,
 					Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
 				},
-				BaseUrl:       conf.CleanApiUrl,
+				Uri:           conf.CleanApiUrl,
 				Method:        "PUT",
-				BaseLogPrefix: "Clean-api: ",
+				LogPrefix:     "Clean-api: ",
 				RetryCount:    2,
 				RetryInterval: 10 * time.Second,
 			}),

@@ -38,7 +38,7 @@ func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, noCut 
 	var isZipDir bool
 
 	if unZip && reqFileExt == ".zip" {
-		targetFsPath, err = ioutil.TempDir(absFsDirPath, cns.ZipDirNamePrefix+"*")
+		targetFsPath, err = os.MkdirTemp(absFsDirPath, cns.ZipDirNamePrefix+"*")
 		if err != nil {
 			c.lg.Errorw("Fail to create temp-dir", err)
 			return "", err
@@ -52,7 +52,7 @@ func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, noCut 
 		isZipDir = true
 	} else {
 		targetFsPath, err = func() (string, error) {
-			f, err := ioutil.TempFile(absFsDirPath, "*"+reqFileExt)
+			f, err := os.CreateTemp(absFsDirPath, "*"+reqFileExt)
 			if err != nil {
 				c.lg.Errorw("Fail to create temp-file", err)
 				return "", err

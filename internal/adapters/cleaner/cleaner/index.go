@@ -20,7 +20,10 @@ func New(lg logger.Lite, httpc httpc.HttpC) *St {
 func (c *St) Check(pathList []string) ([]string, error) {
 	result := make([]string, 0, len(pathList))
 
-	_, err := c.httpc.SendJsonRecvJson(pathList, &result, httpc.OptionsSt{})
+	_, err := c.httpc.Send(&httpc.OptionsSt{
+		ReqObj: pathList,
+		RepObj: &result,
+	})
 
 	return result, err
 }

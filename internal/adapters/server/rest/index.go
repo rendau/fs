@@ -44,6 +44,8 @@ func GetHandler(lg logger.Lite, core *core.St, withCors bool) http.Handler {
 	// main
 	r.POST("/static", s.hSave)
 	r.GET("/static/*any", s.hGet)
+
+	// clean
 	r.GET("/clean", s.hClean)
 
 	return r
