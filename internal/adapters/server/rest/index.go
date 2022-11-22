@@ -41,9 +41,14 @@ func GetHandler(lg logger.Lite, core *core.St, withCors bool) http.Handler {
 	// healthcheck
 	r.GET("/healthcheck", func(c *gin.Context) { c.Status(http.StatusOK) })
 
-	// main
-	r.POST("/static", s.hSave)
-	r.GET("/static/*any", s.hGet)
+	// static
+	r.POST("/static", s.hStaticSave)
+	r.GET("/static/*any", s.hStaticGet)
+
+	// kvs
+	r.POST("/kvs/:key", s.hKvsSet)
+	r.GET("/kvs/:key", s.hKvsGet)
+	r.DELETE("/kvs/:key", s.hKvsRemove)
 
 	// clean
 	r.GET("/clean", s.hClean)

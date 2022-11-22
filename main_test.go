@@ -122,15 +122,15 @@ func TestMain(m *testing.M) {
 func TestCreate(t *testing.T) {
 	cleanTestDir()
 
-	_, err := app.core.Create("asd/"+cns.ZipDirNamePrefix+"_asd", "a.txt", bytes.NewBuffer([]byte("test_data")), false, false)
+	_, err := app.core.Static.Create("asd/"+cns.ZipDirNamePrefix+"_asd", "a.txt", bytes.NewBuffer([]byte("test_data")), false, false)
 	require.NotNil(t, err)
 	require.Equal(t, errs.BadDirName, err)
 
-	_, err = app.core.Create(cns.ZipDirNamePrefix+"_asd/asd", "a.txt", bytes.NewBuffer([]byte("test_data")), false, false)
+	_, err = app.core.Static.Create(cns.ZipDirNamePrefix+"_asd/asd", "a.txt", bytes.NewBuffer([]byte("test_data")), false, false)
 	require.NotNil(t, err)
 	require.Equal(t, errs.BadDirName, err)
 
-	fPath, err := app.core.Create("photos", "data.txt", bytes.NewBuffer([]byte("test_data")), false, false)
+	fPath, err := app.core.Static.Create("photos", "data.txt", bytes.NewBuffer([]byte("test_data")), false, false)
 	require.Nil(t, err)
 
 	fPathPrefix := "photos/" + time.Now().Format("2006/01/02") + "/"
@@ -138,7 +138,7 @@ func TestCreate(t *testing.T) {
 	require.True(t, strings.HasPrefix(fPath, fPathPrefix))
 	require.False(t, strings.Contains(strings.TrimPrefix(fPath, fPathPrefix), "/"))
 
-	fName, _, fContent, err := app.core.Get(fPath, &types.ImgParsSt{}, false)
+	fName, _, fContent, err := app.core.Static.Get(fPath, &types.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 	require.Equal(t, "test_data", string(fContent))
@@ -152,10 +152,10 @@ func TestCreate(t *testing.T) {
 	err = imaging.Encode(largeImgBuffer, largeImg, imaging.JPEG)
 	require.Nil(t, err)
 
-	fPath, err = app.core.Create("photos", "a.jpg", largeImgBuffer, true, false)
+	fPath, err = app.core.Static.Create("photos", "a.jpg", largeImgBuffer, true, false)
 	require.Nil(t, err)
 
-	_, _, fContent, err = app.core.Get(fPath, &types.ImgParsSt{}, false)
+	_, _, fContent, err = app.core.Static.Get(fPath, &types.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -174,10 +174,10 @@ func TestCreate(t *testing.T) {
 	err = imaging.Encode(largeImgBuffer, largeImg, imaging.JPEG)
 	require.Nil(t, err)
 
-	fPath, err = app.core.Create("photos", "a.jpg", largeImgBuffer, false, false)
+	fPath, err = app.core.Static.Create("photos", "a.jpg", largeImgBuffer, false, false)
 	require.Nil(t, err)
 
-	_, _, fContent, err = app.core.Get(fPath, &types.ImgParsSt{}, false)
+	_, _, fContent, err = app.core.Static.Get(fPath, &types.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -188,7 +188,7 @@ func TestCreate(t *testing.T) {
 	require.Equal(t, imgMaxWidth, imgBounds.X)
 	require.Equal(t, imgMaxHeight, imgBounds.X)
 
-	_, _, fContent, err = app.core.Get(fPath, &types.ImgParsSt{Method: "fit", Width: imgMaxWidth - 10, Height: imgMaxHeight - 10}, false)
+	_, _, fContent, err = app.core.Static.Get(fPath, &types.ImgParsSt{Method: "fit", Width: imgMaxWidth - 10, Height: imgMaxHeight - 10}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -199,7 +199,7 @@ func TestCreate(t *testing.T) {
 	require.Equal(t, imgMaxWidth-10, imgBounds.X)
 	require.Equal(t, imgMaxHeight-10, imgBounds.X)
 
-	_, _, fContent, err = app.core.Get(fPath, &types.ImgParsSt{Method: "fit", Width: imgMaxWidth + 10, Height: imgMaxHeight + 10}, false)
+	_, _, fContent, err = app.core.Static.Get(fPath, &types.ImgParsSt{Method: "fit", Width: imgMaxWidth + 10, Height: imgMaxHeight + 10}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -256,32 +256,32 @@ func TestCreateZip(t *testing.T) {
 	zipBuffer, err := createZipArchive(srcZipFiles)
 	require.Nil(t, err)
 
-	_, err = app.core.Create("zip/"+cns.ZipDirNamePrefix+"_asd", "a.zip", zipBuffer, false, true)
+	_, err = app.core.Static.Create("zip/"+cns.ZipDirNamePrefix+"_asd", "a.zip", zipBuffer, false, true)
 	require.NotNil(t, err)
 	require.Equal(t, errs.BadDirName, err)
 
-	_, err = app.core.Create(cns.ZipDirNamePrefix+"_asd/zip", "a.zip", zipBuffer, false, true)
+	_, err = app.core.Static.Create(cns.ZipDirNamePrefix+"_asd/zip", "a.zip", zipBuffer, false, true)
 	require.NotNil(t, err)
 	require.Equal(t, errs.BadDirName, err)
 
-	fPath, err := app.core.Create("zip", "a.zip", zipBuffer, false, true)
+	fPath, err := app.core.Static.Create("zip", "a.zip", zipBuffer, false, true)
 	require.Nil(t, err)
 	require.True(t, strings.HasSuffix(fPath, "/"))
 
 	for _, zp := range srcZipFiles {
-		_, _, fContent, err := app.core.Get(fPath+zp.p, &types.ImgParsSt{}, false)
+		_, _, fContent, err := app.core.Static.Get(fPath+zp.p, &types.ImgParsSt{}, false)
 		require.Nil(t, err)
 		require.NotNil(t, fContent)
 		require.Equal(t, zp.c, string(fContent))
 	}
 
-	fName, _, fContent, err := app.core.Get(fPath, &types.ImgParsSt{}, false)
+	fName, _, fContent, err := app.core.Static.Get(fPath, &types.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.Equal(t, "index.html", fName)
 	require.NotNil(t, fContent)
 	require.Equal(t, "some html content", string(fContent))
 
-	fName, _, fContent, err = app.core.Get(fPath, &types.ImgParsSt{}, true)
+	fName, _, fContent, err = app.core.Static.Get(fPath, &types.ImgParsSt{}, true)
 	require.Nil(t, err)
 	require.True(t, strings.HasSuffix(fName, ".zip"))
 	require.NotNil(t, fContent)
@@ -300,18 +300,18 @@ func TestCreateZip(t *testing.T) {
 	zipBuffer, err = createZipArchive(srcZipFiles)
 	require.Nil(t, err)
 
-	fPath, err = app.core.Create("zip", "a.zip", zipBuffer, false, true)
+	fPath, err = app.core.Static.Create("zip", "a.zip", zipBuffer, false, true)
 	require.Nil(t, err)
 	require.True(t, strings.HasSuffix(fPath, "/"))
 
 	for _, zp := range srcZipFiles {
-		_, _, fContent, err := app.core.Get(fPath+strings.TrimLeft(zp.p, "root/"), &types.ImgParsSt{}, false)
+		_, _, fContent, err := app.core.Static.Get(fPath+strings.TrimLeft(zp.p, "root/"), &types.ImgParsSt{}, false)
 		require.Nil(t, err)
 		require.NotNil(t, fContent)
 		require.Equal(t, zp.c, string(fContent))
 	}
 
-	fName, _, fContent, err = app.core.Get(fPath, &types.ImgParsSt{}, false)
+	fName, _, fContent, err = app.core.Static.Get(fPath, &types.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.Equal(t, "index.html", fName)
 	require.NotNil(t, fContent)

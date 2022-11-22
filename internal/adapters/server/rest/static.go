@@ -14,14 +14,14 @@ import (
 	"github.com/rendau/fs/internal/domain/errs"
 )
 
-// @Router   / [post]
-// @Tags     main
-// @Summary  Upload and save file.
-// @Accept   mpfd
-// @Param    body  body      SaveReqSt  false  "body"
-// @Success  200   {object}  SaveRepSt
-// @Failure  400   {object}  dopTypes.ErrRep
-func (a *St) hSave(c *gin.Context) {
+// @Router  /static [post]
+// @Tags    static
+// @Summary Upload and save file.
+// @Accept  mpfd
+// @Param   body body     SaveReqSt false "body"
+// @Success 200  {object} SaveRepSt
+// @Failure 400  {object} dopTypes.ErrRep
+func (a *St) hStaticSave(c *gin.Context) {
 	var err error
 
 	reqObj := &SaveReqSt{}
@@ -42,7 +42,7 @@ func (a *St) hSave(c *gin.Context) {
 	}
 	defer f.Close()
 
-	result, err := a.core.Create(
+	result, err := a.core.Static.Create(
 		reqObj.Dir,
 		reqObj.File.Filename,
 		f,
@@ -56,15 +56,15 @@ func (a *St) hSave(c *gin.Context) {
 	c.JSON(http.StatusOK, SaveRepSt{Path: result})
 }
 
-// @Router   /:path [get]
-// @Tags     main
-// @Summary  Get or download file.
-// @Param    path   path   string       true   "path"
-// @Param    query  query  GetParamsSt  false  "query"
-// @Produce  octet-stream
-// @Success  200
-// @Failure  400    {object}  dopTypes.ErrRep
-func (a *St) hGet(c *gin.Context) {
+// @Router  /static/:path [get]
+// @Tags    static
+// @Summary Get or download file.
+// @Param   path  path  string      true  "path"
+// @Param   query query GetParamsSt false "query"
+// @Produce octet-stream
+// @Success 200
+// @Failure 400 {object} dopTypes.ErrRep
+func (a *St) hStaticGet(c *gin.Context) {
 	var err error
 
 	urlPath := c.Request.URL.Path
@@ -78,7 +78,7 @@ func (a *St) hGet(c *gin.Context) {
 		return
 	}
 
-	fName, fModTime, fData, err := a.core.Get(urlPath, &types.ImgParsSt{
+	fName, fModTime, fData, err := a.core.Static.Get(urlPath, &types.ImgParsSt{
 		Method:    pars.M,
 		Width:     pars.W,
 		Height:    pars.H,
@@ -101,8 +101,4 @@ func (a *St) hGet(c *gin.Context) {
 	}
 
 	http.ServeContent(c.Writer, c.Request, fName, fModTime, bytes.NewReader(fData))
-}
-
-func (a *St) hClean(c *gin.Context) {
-	a.core.Clean.Clean(0)
 }

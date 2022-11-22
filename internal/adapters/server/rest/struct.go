@@ -6,7 +6,7 @@ import (
 
 type SaveReqSt struct {
 	Dir        string                `json:"dir" form:"dir" binding:"required"`
-	File       *multipart.FileHeader `json:"file" form:"file" binding:"required"`
+	File       *multipart.FileHeader `json:"file" form:"file" binding:"required" swaggertype:"string"`
 	NoCut      bool                  `json:"no_cut" form:"no_cut"`
 	ExtractZip bool                  `json:"extract_zip" form:"extract_zip"`
 }

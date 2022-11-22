@@ -16,18 +16,34 @@ import (
 	"github.com/rendau/fs/internal/domain/util"
 )
 
-func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, noCut bool, unZip bool) (string, error) {
-	if strings.Contains("/"+util.ToUrlPath(reqDir), "/"+cns.ZipDirNamePrefix) {
+type Static struct {
+	r *St
+}
+
+func NewStatic(r *St) *Static {
+	return &Static{
+		r: r,
+	}
+}
+
+func (c *Static) Create(reqDir string, reqFileName string, reqFile io.Reader, noCut bool, unZip bool) (string, error) {
+	reqDirUrlPath := util.ToUrlPath(reqDir)
+
+	if strings.Contains("/"+reqDirUrlPath, "/"+cns.ZipDirNamePrefix) {
+		return "", errs.BadDirName
+	}
+
+	if strings.HasPrefix("/"+reqDirUrlPath, "/"+cns.KvsDirNamePrefix) {
 		return "", errs.BadDirName
 	}
 
 	dateUrlPath := util.GetDateUrlPath()
 
-	absFsDirPath := filepath.Join(c.dirPath, util.ToFsPath(reqDir), util.ToFsPath(dateUrlPath))
+	absFsDirPath := filepath.Join(c.r.dirPath, util.ToFsPath(reqDir), util.ToFsPath(dateUrlPath))
 
 	err := os.MkdirAll(absFsDirPath, os.ModePerm)
 	if err != nil {
-		c.lg.Errorw("Fail to create dirs", err)
+		c.r.lg.Errorw("Fail to create dirs", err)
 		return "", err
 	}
 
@@ -39,11 +55,11 @@ func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, noCut 
 	if unZip && reqFileExt == ".zip" {
 		targetFsPath, err = os.MkdirTemp(absFsDirPath, cns.ZipDirNamePrefix+"*")
 		if err != nil {
-			c.lg.Errorw("Fail to create temp-dir", err)
+			c.r.lg.Errorw("Fail to create temp-dir", err)
 			return "", err
 		}
 
-		err = c.Zip.Extract(reqFile, targetFsPath)
+		err = c.r.Zip.Extract(reqFile, targetFsPath)
 		if err != nil {
 			return "", err
 		}
@@ -53,14 +69,14 @@ func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, noCut 
 		targetFsPath, err = func() (string, error) {
 			f, err := os.CreateTemp(absFsDirPath, "*"+reqFileExt)
 			if err != nil {
-				c.lg.Errorw("Fail to create temp-file", err)
+				c.r.lg.Errorw("Fail to create temp-file", err)
 				return "", err
 			}
 			defer f.Close()
 
 			_, err = io.Copy(f, reqFile)
 			if err != nil {
-				c.lg.Errorw("Fail to copy data", err)
+				c.r.lg.Errorw("Fail to copy data", err)
 				return "", err
 			}
 
@@ -71,10 +87,10 @@ func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, noCut 
 		}
 
 		if !noCut {
-			err = c.Img.Handle(targetFsPath, nil, &types.ImgParsSt{
+			err = c.r.Img.Handle(targetFsPath, nil, &types.ImgParsSt{
 				Method: "fit",
-				Width:  c.imgMaxWidth,
-				Height: c.imgMaxHeight,
+				Width:  c.r.imgMaxWidth,
+				Height: c.r.imgMaxHeight,
 			})
 			if err != nil {
 				return "", err
@@ -82,9 +98,9 @@ func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, noCut 
 		}
 	}
 
-	fileFsRelPath, err := filepath.Rel(c.dirPath, targetFsPath)
+	fileFsRelPath, err := filepath.Rel(c.r.dirPath, targetFsPath)
 	if err != nil {
-		c.lg.Errorw("Fail to get relative path", err, "path", targetFsPath, "base", c.dirPath)
+		c.r.lg.Errorw("Fail to get relative path", err, "path", targetFsPath, "base", c.r.dirPath)
 		return "", err
 	}
 
@@ -97,17 +113,17 @@ func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, noCut 
 	return fileUrlRelPath, nil
 }
 
-func (c *St) Get(reqPath string, imgPars *types.ImgParsSt, download bool) (string, time.Time, []byte, error) {
+func (c *Static) Get(reqPath string, imgPars *types.ImgParsSt, download bool) (string, time.Time, []byte, error) {
 	var err error
 
-	cKey := c.Cache.GenerateKey(reqPath, imgPars, download)
+	cKey := c.r.Cache.GenerateKey(reqPath, imgPars, download)
 
-	if name, modTime, content := c.Cache.GetAndRefresh(cKey); content != nil {
+	if name, modTime, content := c.r.Cache.GetAndRefresh(cKey); content != nil {
 		return name, modTime, content, nil
 	}
 
 	reqFsPath := util.ToFsPath(reqPath)
-	absFsPath := filepath.Join(c.dirPath, reqFsPath)
+	absFsPath := filepath.Join(c.r.dirPath, reqFsPath)
 
 	name := ""
 	modTime := time.Now()
@@ -116,7 +132,7 @@ func (c *St) Get(reqPath string, imgPars *types.ImgParsSt, download bool) (strin
 	fInfo, err := os.Stat(absFsPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			c.lg.Errorw("Fail to get stat of file", err, "f_path", absFsPath)
+			c.r.lg.Errorw("Fail to get stat of file", err, "f_path", absFsPath)
 		}
 		return "", modTime, nil, dopErrs.ObjectNotFound
 	}
@@ -130,7 +146,7 @@ func (c *St) Get(reqPath string, imgPars *types.ImgParsSt, download bool) (strin
 
 		if strings.HasPrefix(dirName, cns.ZipDirNamePrefix) {
 			if download {
-				archiveBuffer, err := c.Zip.CompressDir(absFsPath)
+				archiveBuffer, err := c.r.Zip.CompressDir(absFsPath)
 				if err != nil {
 					return "", modTime, nil, err
 				}
@@ -150,7 +166,7 @@ func (c *St) Get(reqPath string, imgPars *types.ImgParsSt, download bool) (strin
 		_, name = filepath.Split(absFsPath)
 	}
 
-	for _, p := range c.wMarkDirPaths {
+	for _, p := range c.r.wMarkDirPaths {
 		if strings.HasPrefix(reqFsPath, p) {
 			imgPars.WMark = true
 			break
@@ -160,7 +176,7 @@ func (c *St) Get(reqPath string, imgPars *types.ImgParsSt, download bool) (strin
 	if !imgPars.IsEmpty() {
 		buffer := new(bytes.Buffer)
 
-		err = c.Img.Handle(absFsPath, buffer, imgPars)
+		err = c.r.Img.Handle(absFsPath, buffer, imgPars)
 		if err != nil {
 			return "", modTime, nil, err
 		}
@@ -173,12 +189,12 @@ func (c *St) Get(reqPath string, imgPars *types.ImgParsSt, download bool) (strin
 	if len(content) == 0 {
 		content, err = ioutil.ReadFile(absFsPath)
 		if err != nil {
-			c.lg.Errorw("Fail to read file", err, "f_path", absFsPath)
+			c.r.lg.Errorw("Fail to read file", err, "f_path", absFsPath)
 			return "", modTime, nil, err
 		}
 	}
 
-	c.Cache.Set(cKey, name, modTime, content)
+	c.r.Cache.Set(cKey, name, modTime, content)
 
 	return name, modTime, content, nil
 }

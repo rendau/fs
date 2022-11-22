@@ -17,10 +17,12 @@ type St struct {
 	wMarkDirPaths []string
 	testing       bool
 
-	Img   *Img
-	Zip   *Zip
-	Cache *Cache
-	Clean *Clean
+	Static *Static
+	Img    *Img
+	Zip    *Zip
+	Cache  *Cache
+	Clean  *Clean
+	Kvs    *Kvs
 
 	wg     sync.WaitGroup
 	stop   bool
@@ -53,10 +55,12 @@ func New(
 		c.wMarkDirPaths[i] = util.ToFsPath(c.wMarkDirPaths[i])
 	}
 
+	c.Static = NewStatic(c)
 	c.Img = NewImg(c, wMarkPath, wMarkOpacity)
 	c.Zip = NewZip(c)
 	c.Cache = NewCache(c, cacheCount, cacheTtl)
 	c.Clean = NewClean(c, cleaner)
+	c.Kvs = NewKvs(c)
 
 	return c
 }
@@ -64,6 +68,7 @@ func New(
 func (c *St) Start() {
 	c.Img.Start()
 	c.Cache.Start()
+	c.Kvs.Start()
 }
 
 func (c *St) StopAndWaitJobs() {

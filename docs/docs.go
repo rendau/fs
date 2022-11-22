@@ -16,13 +16,102 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/": {
+        "/kvs/:key": {
+            "get": {
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "kvs"
+                ],
+                "summary": "Get file.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "key",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "download",
+                        "name": "query",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dopTypes.ErrRep"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "kvs"
+                ],
+                "summary": "Set file.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "key",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dopTypes.ErrRep"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "kvs"
+                ],
+                "summary": "Remove file.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "key",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dopTypes.ErrRep"
+                        }
+                    }
+                }
+            }
+        },
+        "/static": {
             "post": {
                 "consumes": [
                     "multipart/form-data"
                 ],
                 "tags": [
-                    "main"
+                    "static"
                 ],
                 "summary": "Upload and save file.",
                 "parameters": [
@@ -51,13 +140,13 @@ const docTemplate = `{
                 }
             }
         },
-        "/:path": {
+        "/static/:path": {
             "get": {
                 "produces": [
                     "application/octet-stream"
                 ],
                 "tags": [
-                    "main"
+                    "static"
                 ],
                 "summary": "Get or download file.",
                 "parameters": [
@@ -69,8 +158,18 @@ const docTemplate = `{
                         "required": true
                     },
                     {
+                        "type": "number",
+                        "name": "blur",
+                        "in": "query"
+                    },
+                    {
                         "type": "string",
                         "name": "download",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "name": "grayscale",
                         "in": "query"
                     },
                     {
@@ -91,7 +190,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": ""
+                        "description": "OK"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -121,20 +220,6 @@ const docTemplate = `{
                 }
             }
         },
-        "multipart.FileHeader": {
-            "type": "object",
-            "properties": {
-                "filename": {
-                    "type": "string"
-                },
-                "header": {
-                    "$ref": "#/definitions/textproto.MIMEHeader"
-                },
-                "size": {
-                    "type": "integer"
-                }
-            }
-        },
         "rest.SaveRepSt": {
             "type": "object",
             "properties": {
@@ -157,19 +242,10 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "file": {
-                    "$ref": "#/definitions/multipart.FileHeader"
+                    "type": "string"
                 },
                 "no_cut": {
                     "type": "boolean"
-                }
-            }
-        },
-        "textproto.MIMEHeader": {
-            "type": "object",
-            "additionalProperties": {
-                "type": "array",
-                "items": {
-                    "type": "string"
                 }
             }
         }
