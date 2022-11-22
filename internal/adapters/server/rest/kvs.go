@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"bytes"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -36,7 +37,7 @@ func (a *St) hKvsGet(c *gin.Context) {
 
 	download := c.Query("download")
 
-	file, fModTime, err := a.core.Kvs.Get(key)
+	data, fModTime, err := a.core.Kvs.Get(key)
 	if err != nil {
 		if err == dopErrs.ObjectNotFound {
 			c.Status(http.StatusNotFound)
@@ -45,7 +46,6 @@ func (a *St) hKvsGet(c *gin.Context) {
 		}
 		return
 	}
-	defer file.Close()
 
 	fName := key
 
@@ -56,7 +56,7 @@ func (a *St) hKvsGet(c *gin.Context) {
 		fName = download
 	}
 
-	http.ServeContent(c.Writer, c.Request, fName, fModTime, file)
+	http.ServeContent(c.Writer, c.Request, fName, fModTime, bytes.NewReader(data))
 }
 
 // @Router  /kvs/:key [delete]

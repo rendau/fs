@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/rendau/dop/dopErrs"
@@ -12,7 +13,8 @@ import (
 )
 
 type Kvs struct {
-	r *St
+	r  *St
+	mu sync.RWMutex
 }
 
 func NewKvs(r *St) *Kvs {
@@ -29,6 +31,9 @@ func (c *Kvs) Start() {
 }
 
 func (c *Kvs) Set(key string, file io.Reader) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	f, err := os.Create(c.generateAbsFilePath(key))
 	if err != nil {
 		c.r.lg.Errorw("Fail to create file", err)
@@ -45,7 +50,10 @@ func (c *Kvs) Set(key string, file io.Reader) error {
 	return nil
 }
 
-func (c *Kvs) Get(key string) (io.ReadSeekCloser, time.Time, error) {
+func (c *Kvs) Get(key string) ([]byte, time.Time, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	filePath := c.generateAbsFilePath(key)
 
 	fModTime := time.Now()
@@ -60,16 +68,19 @@ func (c *Kvs) Get(key string) (io.ReadSeekCloser, time.Time, error) {
 
 	fModTime = fStat.ModTime()
 
-	f, err := os.Open(filePath)
+	fData, err := os.ReadFile(filePath)
 	if err != nil {
-		c.r.lg.Errorw("Fail to open file", err)
+		c.r.lg.Errorw("Fail to read file", err)
 		return nil, fModTime, err
 	}
 
-	return f, fModTime, nil
+	return fData, fModTime, nil
 }
 
 func (c *Kvs) Remove(key string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	err := os.RemoveAll(c.generateAbsFilePath(key))
 	if err != nil {
 		c.r.lg.Errorw("Fail to create file", err)
