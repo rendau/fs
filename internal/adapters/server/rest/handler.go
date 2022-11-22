@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	dopHttps "github.com/rendau/dop/adapters/server/https"
 	"github.com/rendau/dop/dopErrs"
-	"github.com/rendau/fs/internal/domain/entities"
+	"github.com/rendau/fs/internal/domain/types"
 
 	"github.com/rendau/fs/internal/domain/errs"
 )
@@ -78,7 +78,7 @@ func (a *St) hGet(c *gin.Context) {
 		return
 	}
 
-	fName, fModTime, fData, err := a.core.Get(urlPath, &entities.ImgParsSt{
+	fName, fModTime, fData, err := a.core.Get(urlPath, &types.ImgParsSt{
 		Method:    pars.M,
 		Width:     pars.W,
 		Height:    pars.H,
@@ -104,5 +104,5 @@ func (a *St) hGet(c *gin.Context) {
 }
 
 func (a *St) hClean(c *gin.Context) {
-	a.core.Clean(0)
+	a.core.Clean.Clean(0)
 }

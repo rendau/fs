@@ -18,8 +18,8 @@ import (
 	"github.com/rendau/fs/internal/adapters/logger/zap"
 	"github.com/rendau/fs/internal/cns"
 	"github.com/rendau/fs/internal/domain/core"
-	"github.com/rendau/fs/internal/domain/entities"
 	"github.com/rendau/fs/internal/domain/errs"
+	"github.com/rendau/fs/internal/domain/types"
 	"github.com/rendau/fs/internal/domain/util"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
@@ -138,7 +138,7 @@ func TestCreate(t *testing.T) {
 	require.True(t, strings.HasPrefix(fPath, fPathPrefix))
 	require.False(t, strings.Contains(strings.TrimPrefix(fPath, fPathPrefix), "/"))
 
-	fName, _, fContent, err := app.core.Get(fPath, &entities.ImgParsSt{}, false)
+	fName, _, fContent, err := app.core.Get(fPath, &types.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 	require.Equal(t, "test_data", string(fContent))
@@ -155,7 +155,7 @@ func TestCreate(t *testing.T) {
 	fPath, err = app.core.Create("photos", "a.jpg", largeImgBuffer, true, false)
 	require.Nil(t, err)
 
-	_, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{}, false)
+	_, _, fContent, err = app.core.Get(fPath, &types.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -177,7 +177,7 @@ func TestCreate(t *testing.T) {
 	fPath, err = app.core.Create("photos", "a.jpg", largeImgBuffer, false, false)
 	require.Nil(t, err)
 
-	_, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{}, false)
+	_, _, fContent, err = app.core.Get(fPath, &types.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -188,7 +188,7 @@ func TestCreate(t *testing.T) {
 	require.Equal(t, imgMaxWidth, imgBounds.X)
 	require.Equal(t, imgMaxHeight, imgBounds.X)
 
-	_, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{Method: "fit", Width: imgMaxWidth - 10, Height: imgMaxHeight - 10}, false)
+	_, _, fContent, err = app.core.Get(fPath, &types.ImgParsSt{Method: "fit", Width: imgMaxWidth - 10, Height: imgMaxHeight - 10}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -199,7 +199,7 @@ func TestCreate(t *testing.T) {
 	require.Equal(t, imgMaxWidth-10, imgBounds.X)
 	require.Equal(t, imgMaxHeight-10, imgBounds.X)
 
-	_, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{Method: "fit", Width: imgMaxWidth + 10, Height: imgMaxHeight + 10}, false)
+	_, _, fContent, err = app.core.Get(fPath, &types.ImgParsSt{Method: "fit", Width: imgMaxWidth + 10, Height: imgMaxHeight + 10}, false)
 	require.Nil(t, err)
 	require.NotNil(t, fContent)
 
@@ -269,19 +269,19 @@ func TestCreateZip(t *testing.T) {
 	require.True(t, strings.HasSuffix(fPath, "/"))
 
 	for _, zp := range srcZipFiles {
-		_, _, fContent, err := app.core.Get(fPath+zp.p, &entities.ImgParsSt{}, false)
+		_, _, fContent, err := app.core.Get(fPath+zp.p, &types.ImgParsSt{}, false)
 		require.Nil(t, err)
 		require.NotNil(t, fContent)
 		require.Equal(t, zp.c, string(fContent))
 	}
 
-	fName, _, fContent, err := app.core.Get(fPath, &entities.ImgParsSt{}, false)
+	fName, _, fContent, err := app.core.Get(fPath, &types.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.Equal(t, "index.html", fName)
 	require.NotNil(t, fContent)
 	require.Equal(t, "some html content", string(fContent))
 
-	fName, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{}, true)
+	fName, _, fContent, err = app.core.Get(fPath, &types.ImgParsSt{}, true)
 	require.Nil(t, err)
 	require.True(t, strings.HasSuffix(fName, ".zip"))
 	require.NotNil(t, fContent)
@@ -305,13 +305,13 @@ func TestCreateZip(t *testing.T) {
 	require.True(t, strings.HasSuffix(fPath, "/"))
 
 	for _, zp := range srcZipFiles {
-		_, _, fContent, err := app.core.Get(fPath+strings.TrimLeft(zp.p, "root/"), &entities.ImgParsSt{}, false)
+		_, _, fContent, err := app.core.Get(fPath+strings.TrimLeft(zp.p, "root/"), &types.ImgParsSt{}, false)
 		require.Nil(t, err)
 		require.NotNil(t, fContent)
 		require.Equal(t, zp.c, string(fContent))
 	}
 
-	fName, _, fContent, err = app.core.Get(fPath, &entities.ImgParsSt{}, false)
+	fName, _, fContent, err = app.core.Get(fPath, &types.ImgParsSt{}, false)
 	require.Nil(t, err)
 	require.Equal(t, "index.html", fName)
 	require.NotNil(t, fContent)

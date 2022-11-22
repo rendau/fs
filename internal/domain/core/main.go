@@ -6,14 +6,13 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/rendau/dop/dopErrs"
 	"github.com/rendau/fs/internal/cns"
-	"github.com/rendau/fs/internal/domain/entities"
 	"github.com/rendau/fs/internal/domain/errs"
+	"github.com/rendau/fs/internal/domain/types"
 	"github.com/rendau/fs/internal/domain/util"
 )
 
@@ -44,7 +43,7 @@ func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, noCut 
 			return "", err
 		}
 
-		err = c.zipExtract(reqFile, targetFsPath)
+		err = c.Zip.Extract(reqFile, targetFsPath)
 		if err != nil {
 			return "", err
 		}
@@ -72,7 +71,7 @@ func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, noCut 
 		}
 
 		if !noCut {
-			err = c.imgHandle(targetFsPath, nil, &entities.ImgParsSt{
+			err = c.Img.Handle(targetFsPath, nil, &types.ImgParsSt{
 				Method: "fit",
 				Width:  c.imgMaxWidth,
 				Height: c.imgMaxHeight,
@@ -98,10 +97,10 @@ func (c *St) Create(reqDir string, reqFileName string, reqFile io.Reader, noCut 
 	return fileUrlRelPath, nil
 }
 
-func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (string, time.Time, []byte, error) {
+func (c *St) Get(reqPath string, imgPars *types.ImgParsSt, download bool) (string, time.Time, []byte, error) {
 	var err error
 
-	cKey := c.GetCacheKey(reqPath, imgPars, download)
+	cKey := c.Cache.GenerateKey(reqPath, imgPars, download)
 
 	if name, modTime, content := c.Cache.GetAndRefresh(cKey); content != nil {
 		return name, modTime, content, nil
@@ -131,7 +130,7 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 
 		if strings.HasPrefix(dirName, cns.ZipDirNamePrefix) {
 			if download {
-				archiveBuffer, err := c.zipCompressDir(absFsPath)
+				archiveBuffer, err := c.Zip.CompressDir(absFsPath)
 				if err != nil {
 					return "", modTime, nil, err
 				}
@@ -161,7 +160,7 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 	if !imgPars.IsEmpty() {
 		buffer := new(bytes.Buffer)
 
-		err = c.imgHandle(absFsPath, buffer, imgPars)
+		err = c.Img.Handle(absFsPath, buffer, imgPars)
 		if err != nil {
 			return "", modTime, nil, err
 		}
@@ -182,221 +181,4 @@ func (c *St) Get(reqPath string, imgPars *entities.ImgParsSt, download bool) (st
 	c.Cache.Set(cKey, name, modTime, content)
 
 	return name, modTime, content, nil
-}
-
-func (c *St) GetCacheKey(reqPath string, imgPars *entities.ImgParsSt, download bool) string {
-	return reqPath + "?" + imgPars.String() + "&dl=" + strconv.FormatBool(download)
-}
-
-func (c *St) Clean(checkChunkSize int) {
-	if checkChunkSize == 0 {
-		checkChunkSize = cns.DefaultCleanChunkSize
-	}
-
-	c.wg.Add(1)
-	if c.testing {
-		c.cleanRoutine(checkChunkSize)
-	} else {
-		go c.cleanRoutine(checkChunkSize)
-	}
-}
-
-func (c *St) cleanRoutine(checkChunkSize int) {
-	defer c.wg.Done()
-
-	stop := false
-
-	rootDirPath := c.dirPath
-
-	var pathList []string
-
-	var totalCount uint64
-	var removedCount uint64
-
-	startTime := time.Now()
-
-	err := filepath.Walk(rootDirPath, func(p string, info os.FileInfo, err error) error {
-		if stop {
-			return filepath.SkipDir
-		}
-
-		if err != nil {
-			c.lg.Errorw("Fail to walk", err, "path", p)
-			return err
-		}
-
-		if info == nil {
-			return nil
-		}
-
-		if p == rootDirPath {
-			return nil
-		}
-
-		mtIsAllowed := info.ModTime().AddDate(0, 0, cns.CleanFileNotCheckPeriodDays).Before(time.Now())
-
-		if len(pathList) >= checkChunkSize {
-			removedCount += c.cleanPathListRoutine(pathList)
-
-			pathList = nil
-
-			if stop = c.IsStopped(); stop {
-				return filepath.SkipDir
-			}
-		}
-
-		relPath, err := filepath.Rel(rootDirPath, p)
-		if err != nil {
-			c.lg.Errorw("Fail to get rel p", err, "path", p, "root_dir_path", rootDirPath)
-			return err
-		}
-
-		if info.IsDir() {
-			if !strings.HasPrefix(info.Name(), cns.ZipDirNamePrefix) {
-				return nil
-			}
-
-			if !mtIsAllowed {
-				return filepath.SkipDir
-			}
-
-			pathList = append(pathList, relPath+"/")
-
-			totalCount++
-
-			return filepath.SkipDir
-		}
-
-		if !mtIsAllowed {
-			return nil
-		}
-
-		pathList = append(pathList, relPath)
-
-		totalCount++
-
-		return nil
-	})
-	if err != nil {
-		c.lg.Errorw("Fail to walk dir", err)
-		return
-	}
-
-	removedCount += c.cleanPathListRoutine(pathList)
-
-	err = c.cleanRemoveEmptyDirs(rootDirPath)
-	if err != nil {
-		c.lg.Errorw("Fail to remove empty dirs", err)
-		return
-	}
-
-	c.lg.Infow(
-		"Cleaned",
-		"total_count", totalCount,
-		"removed_count", removedCount,
-		"duration", time.Now().Sub(startTime).String(),
-	)
-}
-
-func (c *St) cleanPathListRoutine(pathList []string) uint64 {
-	if len(pathList) == 0 {
-		return 0
-	}
-
-	if c.IsStopped() {
-		return 0
-	}
-
-	rmPathList, err := c.cleaner.Check(pathList)
-	if err != nil {
-		return 0
-	}
-
-	for _, p := range rmPathList {
-		// c.lg.Infow("Want to remove", "f_path", p)
-
-		err = os.RemoveAll(filepath.Join(c.dirPath, p))
-		if err != nil {
-			c.lg.Errorw("Fail to remove path", err, "path", p)
-		}
-	}
-
-	return uint64(len(rmPathList))
-}
-
-func (c *St) cleanRemoveEmptyDirs(rootDirPath string) error {
-	if c.IsStopped() {
-		return nil
-	}
-
-	dirs := map[string]uint64{}
-
-	err := filepath.Walk(rootDirPath, func(p string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if info == nil {
-			return nil
-		}
-
-		if p == rootDirPath {
-			return nil
-		}
-
-		if parentPath := filepath.Dir(p); parentPath != rootDirPath {
-			dirs[parentPath]++
-		}
-
-		if info.IsDir() {
-			if _, ok := dirs[p]; !ok {
-				dirs[p] = 0
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	var rr func() error
-
-	rr = func() error {
-		for k, v := range dirs {
-			if k == rootDirPath {
-				continue
-			}
-
-			if v <= 0 {
-				parentPath := filepath.Dir(k)
-				if _, ok := dirs[parentPath]; ok {
-					dirs[parentPath]--
-				}
-
-				err = os.RemoveAll(k)
-				if err != nil {
-					return err
-				}
-
-				delete(dirs, k)
-
-				err = rr()
-				if err != nil {
-					return err
-				}
-
-				break
-			}
-		}
-
-		return nil
-	}
-
-	err = rr()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

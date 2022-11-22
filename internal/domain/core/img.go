@@ -7,12 +7,10 @@ import (
 	"strings"
 
 	"github.com/disintegration/imaging"
-	"github.com/rendau/fs/internal/domain/entities"
+	"github.com/rendau/fs/internal/domain/types"
 )
 
 var (
-	wMark image.Image
-
 	imgFileTypes = map[string]struct {
 		format      imaging.Format
 		contentType string
@@ -27,20 +25,38 @@ var (
 	}
 )
 
-func (c *St) imgLoadWMark(p string) {
-	var err error
+type Img struct {
+	r            *St
+	wMarkPath    string
+	wMark        image.Image
+	wMarkOpacity float64
+}
 
-	if p != "" {
-		wMark, err = imaging.Open(p)
-		if err != nil {
-			c.lg.Errorw("Fail to load w-mark", err)
+func NewImg(r *St, wMarkPath string, wMarkOpacity float64) *Img {
+	if wMarkOpacity == 0 {
+		wMarkOpacity = 1
+	}
 
-			wMark = nil
+	return &Img{
+		r:            r,
+		wMarkPath:    wMarkPath,
+		wMarkOpacity: wMarkOpacity,
+	}
+}
+
+func (c *Img) Start() {
+	// load w-mark
+	if c.wMarkPath != "" {
+		wMark, err := imaging.Open(c.wMarkPath)
+		if err == nil {
+			c.wMark = wMark
+		} else {
+			c.r.lg.Errorw("Fail to load w-mark", err)
 		}
 	}
 }
 
-func (c *St) imgHandle(fPath string, w io.Writer, pars *entities.ImgParsSt) error {
+func (c *Img) Handle(fPath string, w io.Writer, pars *types.ImgParsSt) error {
 	if pars.IsEmpty() {
 		return nil
 	}
@@ -107,9 +123,9 @@ func (c *St) imgHandle(fPath string, w io.Writer, pars *entities.ImgParsSt) erro
 		img = imaging.Grayscale(img)
 	}
 
-	if pWMark && wMark != nil {
+	if pWMark && c.wMark != nil {
 		if imgBounds.X > 100 {
-			wMarkResized := imaging.Resize(wMark, imgBounds.X/3, 0, imaging.Lanczos)
+			wMarkResized := imaging.Resize(c.wMark, imgBounds.X/3, 0, imaging.Lanczos)
 
 			img = imaging.OverlayCenter(img, wMarkResized, c.wMarkOpacity)
 
@@ -121,13 +137,13 @@ func (c *St) imgHandle(fPath string, w io.Writer, pars *entities.ImgParsSt) erro
 		if w == nil {
 			err = imaging.Save(img, fPath)
 			if err != nil {
-				c.lg.Errorw("Fail to save image", err)
+				c.r.lg.Errorw("Fail to save image", err)
 				return err
 			}
 		} else {
 			err = imaging.Encode(w, img, imgFormat.format)
 			if err != nil {
-				c.lg.Errorw("Fail to encode image", err)
+				c.r.lg.Errorw("Fail to encode image", err)
 				return err
 			}
 		}

@@ -11,19 +11,20 @@ import (
 
 type St struct {
 	lg            logger.Lite
-	cleaner       cleaner.Cleaner
 	dirPath       string
 	imgMaxWidth   int
 	imgMaxHeight  int
-	wMarkOpacity  float64
 	wMarkDirPaths []string
 	testing       bool
+
+	Img   *Img
+	Zip   *Zip
+	Cache *Cache
+	Clean *Clean
 
 	wg     sync.WaitGroup
 	stop   bool
 	stopMu sync.RWMutex
-
-	Cache *Cache
 }
 
 func New(
@@ -41,28 +42,28 @@ func New(
 ) *St {
 	c := &St{
 		lg:            lg,
-		cleaner:       cleaner,
 		dirPath:       dirPath,
 		imgMaxWidth:   imgMaxWidth,
 		imgMaxHeight:  imgMaxHeight,
-		wMarkOpacity:  wMarkOpacity,
 		wMarkDirPaths: wMarkDirPaths,
 		testing:       testing,
-	}
-
-	c.imgLoadWMark(wMarkPath)
-
-	if c.wMarkOpacity == 0 {
-		c.wMarkOpacity = 1
 	}
 
 	for i := range c.wMarkDirPaths {
 		c.wMarkDirPaths[i] = util.ToFsPath(c.wMarkDirPaths[i])
 	}
 
+	c.Img = NewImg(c, wMarkPath, wMarkOpacity)
+	c.Zip = NewZip(c)
 	c.Cache = NewCache(c, cacheCount, cacheTtl)
+	c.Clean = NewClean(c, cleaner)
 
 	return c
+}
+
+func (c *St) Start() {
+	c.Img.Start()
+	c.Cache.Start()
 }
 
 func (c *St) StopAndWaitJobs() {

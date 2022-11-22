@@ -77,6 +77,8 @@ func Execute() {
 
 	app.lg.Infow("Starting")
 
+	app.core.Start()
+
 	app.restApiSrv = dopServerHttps.Start(
 		conf.HttpListen,
 		rest.GetHandler(

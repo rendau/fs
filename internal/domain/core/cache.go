@@ -1,8 +1,11 @@
 package core
 
 import (
+	"strconv"
 	"sync"
 	"time"
+
+	"github.com/rendau/fs/internal/domain/types"
 )
 
 type Cache struct {
@@ -24,13 +27,15 @@ type cacheVSt struct {
 }
 
 func NewCache(r *St, maxCount int, ttl time.Duration) *Cache {
-	c := &Cache{
+	return &Cache{
 		r:        r,
 		maxCount: maxCount,
 		ttl:      ttl,
 		m:        map[string]*cacheVSt{},
 	}
+}
 
+func (c *Cache) Start() {
 	if c.maxCount > 0 {
 		go func() {
 			for {
@@ -40,22 +45,6 @@ func NewCache(r *St, maxCount int, ttl time.Duration) *Cache {
 			}
 		}()
 	}
-
-	return c
-}
-
-func (c *Cache) GetAndRefresh(key string) (string, time.Time, []byte) {
-	c.mMu.Lock()
-	defer c.mMu.Unlock()
-
-	now := time.Now()
-
-	if cv, found := c.m[key]; found {
-		cv.st = now
-		return cv.name, cv.mt, cv.data
-	}
-
-	return "", now, nil
 }
 
 func (c *Cache) Set(key string, name string, mt time.Time, data []byte) {
@@ -86,6 +75,24 @@ func (c *Cache) Set(key string, name string, mt time.Time, data []byte) {
 	if len(c.m) > c.maxCount {
 		c.removeOldestOne()
 	}
+}
+
+func (c *Cache) GetAndRefresh(key string) (string, time.Time, []byte) {
+	c.mMu.Lock()
+	defer c.mMu.Unlock()
+
+	now := time.Now()
+
+	if cv, found := c.m[key]; found {
+		cv.st = now
+		return cv.name, cv.mt, cv.data
+	}
+
+	return "", now, nil
+}
+
+func (c *Cache) GenerateKey(reqPath string, imgPars *types.ImgParsSt, download bool) string {
+	return reqPath + "?" + imgPars.String() + "&dl=" + strconv.FormatBool(download)
 }
 
 func (c *Cache) removeOldestOne() {
