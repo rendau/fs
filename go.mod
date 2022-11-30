@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/gin-gonic/gin v1.8.1
-	github.com/rendau/dop v1.1.24
+	github.com/rendau/dop v1.1.26
 	github.com/spf13/viper v1.14.0
 	github.com/stretchr/testify v1.8.1
 	github.com/swaggo/files v0.0.0-20220728132757-551d4a08d97a
